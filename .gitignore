@@ -1,0 +1,77 @@
+# FastAPI
+*.log
+*.pyc
+__pycache__/
+instance/
+.webassets-cache
+
+# PostgreSQL
+*.pid
+*.dump
+
+# Redis
+dump.rdb
+
+# Python
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+.env.test
+.pytype/
+pytest_cache/
+
+# Poetry
+.poetry/
+.pytest_cache/
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE & Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# Node.js (для React)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# React
+build/
+dist/
+.cache/
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# PyCharm
+.idea/
+*.iml
+
+# Build & Distribution
+build/
+dist/
+*.egg-info/
+
+# Jupyter Notebook
+.ipynb_checkpoints/
