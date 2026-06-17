@@ -11,7 +11,7 @@ def encode_jwt(
     algorithm: str = settings.jwt_algorithm,
 ) -> bytes | str:
     """ Из данных пользователя формируем токен"""
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
     payload["iat"] = now
     payload["exp"] = now + timedelta(minutes=expire_minutes)
 

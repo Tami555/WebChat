@@ -2,17 +2,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from jwt.exceptions import InvalidTokenError as JWTTokenInvalidError
 
 
-import crud.users as crud
+import src.crud.users as crud
 from src.models import Users
 
 from src.utils.auth import create_access_token, create_refresh_token, check_access_token, check_refresh_token
 from src.exceptions import TokenTypeMismatchError, InvalidTokenError, UserNotFoundError
 
-from schemas.enums import TokenType
-from schemas import TokenResponse
+from src.schemas.enums import TokenType
+from src.schemas import TokenResponse
 
 
-async def create_tokens_by_user(
+def create_tokens_by_user(
         user: Users
 ) -> TokenResponse:
     """ Генерация токенов для пользователя """
@@ -71,4 +71,4 @@ async def verify_access_token(token: str) -> bool:
             raise TokenTypeMismatchError(expected=TokenType.ACCESS_TOKEN)
         return True
     except (JWTTokenInvalidError, InvalidTokenError):
-        raise InvalidTokenError()
+        return False

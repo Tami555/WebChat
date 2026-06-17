@@ -2,6 +2,7 @@ from asyncio import current_task
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, async_scoped_session
 
 from src.models import Base
+from .config import settings
 
 
 class DatabaseHelper:
@@ -34,3 +35,6 @@ class DatabaseHelper:
         )
         yield session
         await session.remove()
+
+
+database_helper = DatabaseHelper(settings.db_async_url)

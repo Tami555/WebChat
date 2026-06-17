@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, status
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from .base import BaseAppException
@@ -17,6 +18,17 @@ def exception_handler(app: FastAPI):
             }
         )
     
+    @app.exception_handler(RequestValidationError)
+    def pydantic_validation_error_handler(request: Request, exc: RequestValidationError):
+        """ Обработчик Pydantic при невалидных данных """
+        return JSONResponse(
+            status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+            content={
+                "message": "Невалидные данные  !!!",
+                "detail": exc.errors()[0].get("msg")
+            }
+        )
+    
     @app.exception_handler(status.HTTP_500_INTERNAL_SERVER_ERROR)
     def server_error_handler(request: Request, exc: Exception):
         """ Обработчик ошибок сервера """
@@ -24,7 +36,7 @@ def exception_handler(app: FastAPI):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={
                 "error": True,
-                "message": exc.message
+                "message": "Сервер упал !!! Мы его уже поднимаем!! Извините за неудобства :("
             }
         )
     
@@ -34,6 +46,6 @@ def exception_handler(app: FastAPI):
             status_code=status.HTTP_404_NOT_FOUND,
             content={
                 "error": True,
-                "message": "НЕТ здесь ничего такого !!! Фигню ищешь какую-то"
+                "message": "НЕТ здесь ничего такого !!! Фигню какую-то не ищи пж"
             }
         )

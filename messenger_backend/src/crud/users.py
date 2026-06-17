@@ -16,3 +16,11 @@ async def get_user_by_phone(phone: str, session: AsyncSession) -> Users | None:
     stmt = select(Users).where(Users.phone == phone)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def create_user(user_data: dict, session: AsyncSession) -> Users:
+    """ Создание пользователя """
+    new_user = Users(**user_data)
+    session.add(new_user)
+    await session.commit()
+    return new_user
