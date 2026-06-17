@@ -1,0 +1,39 @@
+from fastapi import FastAPI, Request, status
+from fastapi.responses import JSONResponse
+
+from .base import BaseAppException
+
+
+def exception_handler(app: FastAPI):
+
+    @app.exception_handler(BaseAppException)
+    def app_exception_handler(request: Request, exc: BaseAppException):
+        """ Обработчик кастомных ошибок """
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={
+                "error": True,
+                "message": exc.message
+            }
+        )
+    
+    @app.exception_handler(status.HTTP_500_INTERNAL_SERVER_ERROR)
+    def server_error_handler(request: Request, exc: Exception):
+        """ Обработчик ошибок сервера """
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={
+                "error": True,
+                "message": exc.message
+            }
+        )
+    
+    @app.exception_handler(status.HTTP_404_NOT_FOUND)
+    def not_found_error_handler(request: Request, exc: Exception):
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={
+                "error": True,
+                "message": "НЕТ здесь ничего такого !!! Фигню ищешь какую-то"
+            }
+        )
