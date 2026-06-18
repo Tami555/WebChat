@@ -1,16 +1,6 @@
 import datetime
-from typing import Annotated, Union, Optional
-from pydantic import BaseModel, Field
-from pydantic_extra_types.phone_numbers import PhoneNumber, PhoneNumberValidator
-
-
-class UserCreate(BaseModel):
-    username: str
-    phone: Annotated[Union[str, PhoneNumber], PhoneNumberValidator(default_region='RU')]
-
-
-class UserLogin(BaseModel):
-    phone: Annotated[Union[str, PhoneNumber], PhoneNumberValidator(default_region='RU')]
+from pydantic import BaseModel
+from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
 class UserResponse(BaseModel):

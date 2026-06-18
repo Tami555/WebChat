@@ -1,5 +1,4 @@
 from .jwt import encode_jwt, decode_jwt
-
 from src.core.config import settings
 from src.schemas.enums import TokenType
 

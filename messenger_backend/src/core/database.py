@@ -28,7 +28,7 @@ class DatabaseHelper:
         async with self.session_factory() as session:
             yield session
 
-    async def create_scope_session(self):
+    async def create_scoped_session(self):
         session = async_scoped_session(
             scopefunc=current_task,
             session_factory=self.session_factory

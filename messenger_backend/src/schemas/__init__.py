@@ -4,11 +4,14 @@ __all__ = (
     "RefreshTokenContent",
     "TokenRequest",
     "TokenVerifyResponse",
-    "UserCreate",
-    "UserLogin",
+    "RegistrationUser",
+    "LoginUser",
     "UserResponse"
 )
 
 
-from .auth import TokenResponse, AccessTokenContent, RefreshTokenContent, TokenRequest, TokenVerifyResponse
-from .users import UserCreate, UserLogin, UserResponse
+from .auth import (
+    TokenResponse, AccessTokenContent, RefreshTokenContent,
+    TokenRequest, TokenVerifyResponse, RegistrationUser, LoginUser
+)
+from .users import UserResponse

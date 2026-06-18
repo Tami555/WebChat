@@ -49,3 +49,13 @@ def exception_handler(app: FastAPI):
                 "message": "НЕТ здесь ничего такого !!! Фигню какую-то не ищи пж"
             }
         )
+    
+    @app.exception_handler(status.HTTP_401_UNAUTHORIZED)
+    def no_authenticated_error_handler(request: Request, exc: Exception):
+        return JSONResponse(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            content={
+                "error": True,
+                "message": "Вы не авторизованы! Войдите пожалуйста в аккаунт"
+            }
+        )

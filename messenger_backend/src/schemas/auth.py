@@ -1,4 +1,6 @@
+from typing import Annotated, Union
 from pydantic import BaseModel
+from pydantic_extra_types.phone_numbers import PhoneNumber, PhoneNumberValidator
 
 from src.models import Users
 
@@ -36,3 +38,12 @@ class AccessTokenContent(RefreshTokenContent):
             sub=user.username,
             phone=user.phone
         )
+
+
+class RegistrationUser(BaseModel):
+    username: str
+    phone: Annotated[Union[str, PhoneNumber], PhoneNumberValidator(default_region='RU')]
+
+
+class LoginUser(BaseModel):
+    phone: Annotated[Union[str, PhoneNumber], PhoneNumberValidator(default_region='RU')]
