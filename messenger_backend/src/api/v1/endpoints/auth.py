@@ -1,7 +1,11 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.schemas import RegistrationUser, TokenResponse, LoginUser, TokenRequest, TokenVerifyResponse
+from src.schemas import (
+    RegistrationUser, TokenResponse, LoginUser,
+    TokenRequest, TokenVerifyResponse, PhoneVerificationRequest,
+    VerificationCodeResponse
+)
 from src.core.database import database_helper
 from src.services import AuthService
 
@@ -9,22 +13,43 @@ from src.services import AuthService
 router = APIRouter()
 
 
-@router.post('/registration')
-async def register_user(
+@router.post("/register")
+async def register_request(
     user_data: RegistrationUser,
     session: AsyncSession = Depends(database_helper.create_scoped_session)
-) -> TokenResponse:
-    """ Регистрация пользователя """
-    return await AuthService.register_user(session=session, user_data=user_data)
+) -> VerificationCodeResponse:
+    """Запрос на регистрацию: Отправляет код верификации на телефон"""
+    await AuthService.request_registration(session, user_data)
+    return VerificationCodeResponse()
 
 
-@router.post('/login')
-async def login_user(
-    user_data: LoginUser,
+@router.post("/verify-registration", response_model=TokenResponse)
+async def complete_registration(
+    verification_data: PhoneVerificationRequest,
     session: AsyncSession = Depends(database_helper.create_scoped_session)
 ) -> TokenResponse:
-    """ Вход пользователя """
-    return await AuthService.login_user(session=session, user_data=user_data)
+    """Завершение регистрации: Подтверждение кода и создание пользователя"""
+    return await AuthService.complete_registration(session, verification_data)
+
+
+@router.post("/login")
+async def login_request(
+    user_data: LoginUser,
+    session: AsyncSession = Depends(database_helper.create_scoped_session)
+) -> VerificationCodeResponse:
+    """Запрос на вход: Отправляет код верификации на телефон
+    """
+    await AuthService.request_login(session, user_data)
+    return VerificationCodeResponse()
+
+
+@router.post("/verify-login", response_model=TokenResponse)
+async def complete_login(
+    verification_data: PhoneVerificationRequest,
+    session: AsyncSession = Depends(database_helper.create_scoped_session)
+) -> TokenResponse:
+    """Завершение входа: Подтверждение кода и выдача токенов"""
+    return await AuthService.complete_login(session, verification_data)
 
 
 @router.post("/refresh", response_model=TokenResponse, response_model_exclude_none=True)

@@ -1,7 +1,15 @@
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
 
 from src.models import Users
+
+
+async def get_user_by_id(id: UUID, session: AsyncSession) -> Users | None:
+    """ Получение пользователя по id """
+    stmt = select(Users).where(Users.id == id)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
 
 
 async def get_user_by_username(username: str, session: AsyncSession) -> Users | None:

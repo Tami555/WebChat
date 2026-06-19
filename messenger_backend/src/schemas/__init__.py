@@ -6,12 +6,15 @@ __all__ = (
     "TokenVerifyResponse",
     "RegistrationUser",
     "LoginUser",
-    "UserResponse"
+    "UserResponse",
+    "PhoneVerificationRequest",
+    "VerificationCodeResponse"
 )
 
 
 from .auth import (
-    TokenResponse, AccessTokenContent, RefreshTokenContent,
-    TokenRequest, TokenVerifyResponse, RegistrationUser, LoginUser
+    TokenResponse, AccessTokenContent, RefreshTokenContent, TokenRequest, TokenVerifyResponse,
+    RegistrationUser, LoginUser,
+    PhoneVerificationRequest, VerificationCodeResponse
 )
 from .users import UserResponse

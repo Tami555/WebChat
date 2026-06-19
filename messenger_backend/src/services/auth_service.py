@@ -7,45 +7,94 @@ from src.models import Users
 from src.core.security import create_access_token, create_refresh_token, check_access_token, check_refresh_token
 from src.exceptions import auth as auth_exc, users as users_exc
 from src.schemas.enums import TokenType
-from src.schemas import TokenResponse, RegistrationUser, LoginUser
+from src.schemas import TokenResponse, RegistrationUser, LoginUser, PhoneVerificationRequest
+from src.services.verification_service import VerificationService
 
 
 class AuthService:
     """Сервис аутентификации"""
-
+    
     @staticmethod
-    async def register_user(
+    async def request_registration(
         session: AsyncSession,
         user_data: RegistrationUser
-    ) -> TokenResponse:
-        """Регистрация нового пользователя"""
+    ) -> str:
+        """ Запрос на регистрацию - отправка кода """
         if await crud.get_user_by_phone(user_data.phone, session) is not None:
             raise users_exc.PhoneAlreadyExistsError()
     
         if await crud.get_user_by_username(user_data.username, session) is not None:
             raise users_exc.UsernameAlreadyExistsError()
-    
-        # (Будет реализовано) Отправка sms на подтверждение номера телефона
-        # После успешного подтверждения -> создаем
-
-        data = user_data.model_dump()
-        data["last_seen"] = datetime.datetime.now()
-        new_user = await crud.create_user(user_data=data, session=session)
-        return AuthService.create_tokens_by_user(user=new_user)
+        
+        # Отправляем код
+        await VerificationService.create_verification(
+            phone=user_data.phone,
+            data={
+                "username": user_data.username,
+                "phone": user_data.phone
+            }
+        )
+        
+    @staticmethod
+    async def complete_registration(
+        session: AsyncSession,
+        verification_data: PhoneVerificationRequest
+    ) -> TokenResponse:
+        """ Завершение регистрации - подтверждение кода и создание пользователя """
+        # Проверяем код
+        user_data = await VerificationService.verify_code(
+            phone=verification_data.phone,
+            code=verification_data.code
+        )
+        # Создаем пользователя
+        user_data["last_seen"] = datetime.datetime.now()
+        new_user = await crud.create_user(
+            user_data=user_data,
+            session=session
+        )
+        # Отдаем токены
+        return AuthService.create_tokens_by_user(new_user)
     
     @staticmethod
-    async def login_user(
+    async def request_login(
         session: AsyncSession,
         user_data: LoginUser
-    ) -> TokenResponse:
-        """ Вход пользователя по номеру телефона"""
-        login_user = await crud.get_user_by_phone(user_data.phone, session)
-        if login_user is None:
+    ) -> str:
+        """Запрос на вход - отправка кода"""
+        # Проверяем существование пользователя
+        user = await crud.get_user_by_phone(user_data.phone, session)
+        if not user:
             raise users_exc.UserNotFoundError()
+               
+        # Отправляем код
+        await VerificationService.create_verification(
+            phone=user_data.phone,
+            data={
+                "username": user.username,
+                "phone": user_data.phone
+            }
+        )
     
-        # (Будет реализовано) Отправка sms на подтверждение номера телефона
-        # После успешного подтверждения -> токены
-        return AuthService.create_tokens_by_user(user=login_user)
+    @staticmethod
+    async def complete_login(
+        session: AsyncSession,
+        verification_data: PhoneVerificationRequest
+    ) -> TokenResponse:
+        """ Завершение входа - подтверждение кода и выдача токенов """
+        # Проверяем код
+        user_data = await VerificationService.verify_code(
+            phone=verification_data.phone,
+            code=verification_data.code
+        )   
+        # Получаем пользователя
+        user = await crud.get_user_by_username(username=user_data.get("username"), session=session)
+        if not user:
+            raise users_exc.UserNotFoundError()
+        # Обновляем вход
+        user.last_seen = datetime.datetime.now()
+        await session.commit()
+        # Отдаем токены
+        return AuthService.create_tokens_by_user(user)
     
     @staticmethod
     def create_tokens_by_user(
