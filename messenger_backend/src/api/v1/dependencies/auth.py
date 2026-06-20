@@ -1,4 +1,5 @@
-from fastapi import Depends
+from typing import Annotated
+from fastapi import Depends, Header, Query
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -17,3 +18,12 @@ async def get_current_user(
     """ Получение пользователя по токену """
     token = credentials.credentials
     return await AuthService.get_user_by_token(token, session)
+
+
+async def get_current_user_ws(
+    token: Annotated[str, Query()],
+    session: AsyncSession = Depends(database_helper.create_scoped_session)
+) -> Users:
+    """Получение текущего пользователя по токену для WebSocket"""
+    user = await AuthService.get_user_by_token(token, session)
+    return user

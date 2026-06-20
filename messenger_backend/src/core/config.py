@@ -13,7 +13,9 @@ class VerificationConfig(BaseModel):
 
 class RedisNamespaces(BaseSettings):
     phone_verification: str = "phone:verification"
-    user_online: str = "user:online"
+    users_online: str = "online:users"
+    ws_server_user: str = "ws:server"
+    pubsub_server: str = "pubsub:server"
 
 
 class RedisConfig(BaseSettings):    

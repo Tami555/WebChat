@@ -7,6 +7,7 @@ from src.core.config import settings
 class RedisHelper:
     def __init__(self):
         self.client: Optional[aioredis.Redis] = None
+        self.namespace = settings.redis.namespaces
     
     async def connect(self):
         """Подключение к Redis"""
