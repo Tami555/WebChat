@@ -21,5 +21,5 @@ class MessageStatuses(Base):
         UniqueConstraint("message_id", "user_id", name="unique_message_status"),
     )
     # Отношения
-    recipient: Mapped["Users"] = relationship(back_populates="message_statuses") # Получатель
-    message: Mapped["Messages"] = relationship()
+    recipient: Mapped["Users"] = relationship(foreign_keys=[user_id], back_populates="message_statuses") # Получатель
+    message: Mapped["Messages"] = relationship(foreign_keys=[message_id], back_populates="statuses")

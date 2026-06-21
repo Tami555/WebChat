@@ -14,19 +14,20 @@ if TYPE_CHECKING:
     from .groups import Groups
     from .dialogs import Dialogs
     from .stickers import Stickers
+    from .message_statuses import MessageStatuses
 
 
 class Messages(UUIDPrimaryKey, Base):
     sender_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    dialog_id: Mapped[UUID] = mapped_column(ForeignKey("dialogs.id", ondelete="CASCADE"), index=True)
-    group_id: Mapped[UUID] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"), index=True)
+    dialog_id: Mapped[UUID] = mapped_column(ForeignKey("dialogs.id", ondelete="CASCADE"), index=True, nullable=True)
+    group_id: Mapped[UUID] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"), index=True, nullable=True)
     type: Mapped[MessageTypes] = mapped_column(
         SQLEnum(MessageTypes, name="message_types"),
         default=MessageTypes.TEXT
     )
     content: Mapped[str] = mapped_column(Text, nullable=True)
     file_url: Mapped[str] = mapped_column(nullable=True)
-    sticker_id: Mapped[UUID] = mapped_column(ForeignKey("stickers.id", ondelete="CASCADE"))
+    sticker_id: Mapped[UUID] = mapped_column(ForeignKey("stickers.id", ondelete="CASCADE"), nullable=True)
     reply_to_id: Mapped[UUID] = mapped_column(ForeignKey("messages.id", ondelete="SET NULL"), nullable=True)
     created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now, server_default=func.now(), index=True)
     is_deleted: Mapped[bool] = mapped_column(default=False, index=True)
@@ -51,8 +52,9 @@ class Messages(UUIDPrimaryKey, Base):
         ),
     )
     # Отношения
-    sender: Mapped["Users"] = relationship(back_populates="messages")
-    dialog: Mapped["Dialogs"] = relationship(back_populates="messages")
-    group: Mapped["Groups"] = relationship(back_populates="messages")
-    reply_message: Mapped["Messages"] = relationship(foreign_keys=[reply_to_id])
-    sticker: Mapped["Stickers"] = relationship(back_populates="messages")
+    sender: Mapped["Users"] = relationship(foreign_keys=[sender_id], back_populates="messages")
+    dialog: Mapped["Dialogs | None"] = relationship(foreign_keys=[dialog_id], back_populates="messages")
+    group: Mapped["Groups | None"] = relationship(foreign_keys=[group_id], back_populates="messages")
+    reply_message: Mapped["Messages | None"] = relationship(foreign_keys=[reply_to_id], remote_side="Messages.id")
+    sticker: Mapped["Stickers | None"] = relationship(foreign_keys=[sticker_id], back_populates="messages")
+    statuses: Mapped[list["MessageStatuses"]] = relationship(foreign_keys="MessageStatuses.message_id", back_populates="message")

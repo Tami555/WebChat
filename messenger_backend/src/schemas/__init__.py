@@ -6,9 +6,13 @@ __all__ = (
     "TokenVerifyResponse",
     "RegistrationUser",
     "LoginUser",
-    "UserResponse",
     "PhoneVerificationRequest",
-    "VerificationCodeResponse"
+    "VerificationCodeResponse",
+    "UserResponse",
+    "ShortUserResponse",
+    "ShortMessage",
+    "Chat",
+    "AllChats"
 )
 
 
@@ -17,4 +21,6 @@ from .auth import (
     RegistrationUser, LoginUser,
     PhoneVerificationRequest, VerificationCodeResponse
 )
-from .users import UserResponse
+from .users import UserResponse, ShortUserResponse
+from .messages import ShortMessage
+from .chats import Chat, AllChats

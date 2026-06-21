@@ -25,5 +25,5 @@ class GroupMembers(Base):
         UniqueConstraint("group_id", "user_id", name="unique_group_user"),
     )
     # Отношения
-    group: Mapped["Groups"] = relationship(back_populates="group_members")
-    member: Mapped["Users"] = relationship(back_populates="member_groups")
+    group: Mapped["Groups"] = relationship(foreign_keys=[group_id], back_populates="group_members")
+    member: Mapped["Users"] = relationship(foreign_keys=[user_id], back_populates="member_groups")

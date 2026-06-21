@@ -15,9 +15,11 @@ async def lifespan(app: FastAPI):
     print(f"APP ID : {id(app)}")
     await redis_helper.connect()
     await websocket_manager.initialize(server_id=f"server-{id(app)}")
+    print(f"Кто онлайн: {await redis_helper.client.smembers(redis_helper.namespace.users_online)}")
     yield
     await redis_helper.disconnect()
     print("STOP BACKEND")
+
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(api_v1_router, prefix="/api/v1")

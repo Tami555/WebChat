@@ -17,5 +17,5 @@ class Stickers(UUIDPrimaryKey, Base):
     emoji: Mapped[str] = mapped_column(String(5), default="⭐")
     pack_id: Mapped[int] = mapped_column(ForeignKey("sticker_packs.id", ondelete="CASCADE"))
     # Отношения
-    pack: Mapped["StickerPacks"] = relationship(back_populates="stickers")
-    messages: Mapped[list["Messages"]] = relationship(back_populates="sticker")
+    pack: Mapped["StickerPacks"] = relationship(foreign_keys=[pack_id], back_populates="stickers")
+    messages: Mapped[list["Messages"]] = relationship(foreign_keys="Messages.sticker_id", back_populates="sticker")

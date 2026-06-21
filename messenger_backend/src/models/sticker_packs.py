@@ -14,4 +14,4 @@ class StickerPacks(UUIDPrimaryKey, Base):
     name: Mapped[str] = mapped_column(String(100))
     is_premium: Mapped[bool] = mapped_column(default=False)
     # Отношения
-    stickers: Mapped[list["Stickers"]] = relationship(back_populates="pack")
+    stickers: Mapped[list["Stickers"]] = relationship(foreign_keys="Stickers.pack_id", back_populates="pack")

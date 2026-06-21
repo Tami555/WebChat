@@ -21,5 +21,5 @@ class UserContacts(UUIDPrimaryKey, Base):
         UniqueConstraint("user_id", "contact_user_id", name="unique_user_contact"),
     )
     # Отношения
-    user: Mapped["Users"] = relationship(back_populates="contacts")
-    contact: Mapped["Users"] = relationship()
+    user: Mapped["Users"] = relationship(foreign_keys=[user_id], back_populates="contacts")
+    contact: Mapped["Users"] = relationship(foreign_keys=[contact_user_id])
