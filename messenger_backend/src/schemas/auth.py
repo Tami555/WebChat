@@ -1,9 +1,12 @@
-from typing import Annotated, Union
+from typing import Annotated, Union, TYPE_CHECKING
 from pydantic import BaseModel, field_validator
 from pydantic_extra_types.phone_numbers import PhoneNumber, PhoneNumberValidator
 
-from src.models import Users
 from src.core.config import settings
+
+
+if TYPE_CHECKING:
+    from src.models import Users  
 
 
 # === РЕГИСТРАЦИЯ ===
@@ -53,7 +56,7 @@ class RefreshTokenContent(BaseModel):
     sub: str
 
     @classmethod
-    def from_user(cls, user: Users):
+    def from_user(cls, user: "Users"):
         return cls(
             sub=user.username,
         )
@@ -63,7 +66,7 @@ class AccessTokenContent(RefreshTokenContent):
     phone: str
 
     @classmethod
-    def from_user(cls, user: Users):
+    def from_user(cls, user: "Users"):
         return cls(
             sub=user.username,
             phone=user.phone
