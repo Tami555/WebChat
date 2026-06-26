@@ -1,8 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Users
+from src.models import Users, Dialogs
 from src.crud import dialogs as crud
-from src.schemas import Chat
+from src.schemas import Chat, CreateDialog
+from src.exceptions import DialogAlreadyExistsError, DialogWithOneUserError
+from .user_service import UserService
 
 
 class DialogService:
@@ -12,7 +14,6 @@ class DialogService:
     async def get_dialogs_by_user(user: Users, session: AsyncSession) -> list[Chat]:
         """Получение всех чатов-диалогов, в которых состоит пользователь"""
         dialogs = await crud.dialogs_by_user(user_id=user.id, session=session)
-        print("ДИАЛОГИ", dialogs)
         chats = []
         for dialog in dialogs:
             unread_count = await crud.unread_count_for_message(dialog_id=dialog.id, user_id=user.id, session=session)
@@ -27,4 +28,25 @@ class DialogService:
             chats.append(chat)
         return chats
     
-    # Создание чата, Удаление
+    @staticmethod
+    async def create_dialog(creator: Users, dialog_data: CreateDialog, session: AsyncSession) -> Dialogs:
+        """Создание диалога"""
+
+        # проверка что собеседник не равен автору
+        if creator.id == dialog_data.interlocutor:
+            raise DialogWithOneUserError()
+        # проверка существования собеседника
+        await UserService.get_user_by_id(user_id=dialog_data.interlocutor, session=session)
+        # проверка на уже имеющийся диалог
+        if await crud.get_dialog_between_users(user1_id=creator.id, user2_id=dialog_data.interlocutor, session=session) is not None:
+            raise DialogAlreadyExistsError()
+
+        new_dialog = await crud.create_dialog(
+            creator_id=creator.id,
+            interlocutor_id=dialog_data.interlocutor,
+            session=session
+        )
+        return await crud.get_dialog_by_id(new_dialog.id, session)
+
+    # Удаление
+    # Получение всей инфы

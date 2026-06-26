@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.get("/", response_model=AllChats)
-async def get_current_user(
+async def get_user_chats(
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session)
 ) -> AllChats:

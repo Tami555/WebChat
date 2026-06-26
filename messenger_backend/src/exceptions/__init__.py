@@ -9,7 +9,12 @@ __all__ = (
     "UsernameAlreadyExistsError",
     "VerificationCodeExpiredError",
     "InvalidVerificationCodeError",
-    "TooManyAttemptsError"
+    "TooManyAttemptsError",
+    "MemberAlreadyExistsError",
+    "CreatorIsNotMember",
+    "RecurringMembers",
+    "DialogAlreadyExistsError",
+    "DialogWithOneUserError"
 )
 
 
@@ -18,3 +23,5 @@ from .base import BaseAppException
 from .auth import InvalidTokenError, TokenTypeMismatchError
 from .users import UserNotFoundError, UserAlreadyExistsError, PhoneAlreadyExistsError, UsernameAlreadyExistsError
 from .verification import VerificationCodeExpiredError, InvalidVerificationCodeError, TooManyAttemptsError
+from .groups import MemberAlreadyExistsError, CreatorIsNotMember, RecurringMembers
+from .dialogs import DialogAlreadyExistsError, DialogWithOneUserError

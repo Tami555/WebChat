@@ -15,7 +15,7 @@ if TYPE_CHECKING:
 
 
 class Groups(UUIDPrimaryKey, Base):
-    title: Mapped[str] = mapped_column(String(20), nullable=False)
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=True)
     avatar_url: Mapped[str] = mapped_column(nullable=True)
     created_by: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))

@@ -1,4 +1,5 @@
 from sqlalchemy import select
+from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
@@ -15,6 +16,20 @@ async def get_user_by_id(id: UUID, session: AsyncSession) -> Users | None:
 async def get_user_by_username(username: str, session: AsyncSession) -> Users | None:
     """ Получение пользователя по username """
     stmt = select(Users).where(Users.username == username)
+    result = await session.execute(stmt)
+    return result.scalar_one_or_none()
+
+
+async def get_user_by_username_with_relationships(username: str, session: AsyncSession) -> Users | None:
+    """ Получение пользователя по username с подгрузкой связей """
+    stmt = select(Users)\
+        .where(Users.username == username)\
+        .options(
+            selectinload(Users.dialogs_as_user1),
+            selectinload(Users.dialogs_as_user2),
+            selectinload(Users.member_groups),
+            selectinload(Users.contacts),
+        )
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
 
