@@ -46,7 +46,7 @@ class DialogService:
             interlocutor_id=dialog_data.interlocutor,
             session=session
         )
-        return await crud.get_dialog_by_id(new_dialog.id, session)
+        return await crud.get_dialog_by_id_with_relationships(new_dialog.id, session)
 
     # Удаление
     # Получение всей инфы

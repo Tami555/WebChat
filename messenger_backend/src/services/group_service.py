@@ -1,7 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Groups
-from src.crud import groups as crud
+from src.crud import groups as group_crud, users as user_crud
 from src.schemas import Chat, CreateGroupWithMembers
 from src.exceptions import CreatorIsNotMember, RecurringMembers, UserNotFoundError
 
@@ -12,10 +12,10 @@ class GroupService:
     @staticmethod
     async def get_groups_by_user(user: Users, session: AsyncSession) -> list[Chat]:
         """Получение всех групп, в которых состоит пользователь"""
-        groups = await crud.groups_by_user(user_id=user.id, session=session)
+        groups = await group_crud.groups_by_user(user_id=user.id, session=session)
         chats = []
         for group in groups:
-            unread_count = await crud.unread_count_for_message(group_id=group.id, user_id=user.id, session=session)
+            unread_count = await group_crud.unread_count_for_message(group_id=group.id, user_id=user.id, session=session)
             chat = Chat(
                 id=group.id,
                 title=group.title,
@@ -39,10 +39,10 @@ class GroupService:
         if len(create_group_data.members) != len(set(create_group_data.members)):
             raise RecurringMembers()
         # проверка, что все участники (id) существуют
-        if not await crud.check_users_exist(session, create_group_data.members):
+        if not await user_crud.check_users_exist(session, create_group_data.members):
             raise UserNotFoundError()
         
-        return await crud.create_group(
+        return await group_crud.create_group(
                 creator_id=creator.id,
                 group_data=group_data,
                 members_list=create_group_data.members,

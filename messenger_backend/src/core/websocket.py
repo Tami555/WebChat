@@ -39,7 +39,7 @@ class WebsocketManager:
         """Отправляет сообщение через WebSocket если пользователь онлайн"""
         # Если пользователь на этом же сервере
         if to_username in self.active_connections:
-            if from_username != to_username:
+            if from_username != to_username: # TODO: убрать это в эндпоинт
                 await self.active_connections[to_username].send_json(data)
             return True
         else: 

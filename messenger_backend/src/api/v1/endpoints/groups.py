@@ -12,7 +12,7 @@ router = APIRouter()
 
 
 @router.get("/chats", response_model=list[Chat])
-async def get_user_chats(
+async def get_group_chats(
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session)
 ) -> list[Chat]:

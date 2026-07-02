@@ -13,7 +13,7 @@ async def dialogs_by_user(user_id: UUID, session: AsyncSession) -> list[Dialogs]
         ).options(
             joinedload(Dialogs.user1),
             joinedload(Dialogs.user2),
-            joinedload(Dialogs.last_message)
+            joinedload(Dialogs.last_message).joinedload(Messages.sticker),
         )
     dialogs = await session.scalars(stmt)
     return dialogs.all()
@@ -63,14 +63,21 @@ async def create_dialog(creator_id: UUID, interlocutor_id: UUID, session: AsyncS
     return new_dialog
 
 
-async def get_dialog_by_id(dialog_id: UUID, session: AsyncSession) -> Dialogs:
-    """Получение полной информации о диалоге по id"""
+async def get_dialog_by_id(dialog_id: UUID, session: AsyncSession) -> Dialogs | None:
+    """Получение диалога по id"""
+    stmt = select(Dialogs).where(Dialogs.id == dialog_id)
+    dialog = await session.execute(stmt)
+    return dialog.scalar_one_or_none()
+
+
+async def get_dialog_by_id_with_relationships(dialog_id: UUID, session: AsyncSession) -> Dialogs:
+    """Получение диалога по id с подгрузкой связей"""
     stmt = select(Dialogs)\
         .where(Dialogs.id == dialog_id)\
         .options(
             joinedload(Dialogs.user1),
             joinedload(Dialogs.user2),
-            joinedload(Dialogs.last_message)
+            joinedload(Dialogs.last_message).joinedload(Messages.sticker),
         )
     dialog = await session.scalar(stmt)
     return dialog

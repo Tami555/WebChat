@@ -11,7 +11,8 @@ async def groups_by_user(user_id: UUID, session: AsyncSession) -> list[Groups]:
     """Получение всех групп, в которых состоит пользователь"""
     stmt = select(Groups).join(GroupMembers, GroupMembers.group_id == Groups.id).options(
         selectinload(Groups.group_members),
-        joinedload(Groups.last_message).joinedload(Messages.sender)
+        joinedload(Groups.last_message).joinedload(Messages.sender),
+        joinedload(Groups.last_message).joinedload(Messages.sticker),
     ).where(GroupMembers.user_id == user_id)
     groups = await session.scalars(stmt)
     return groups.all()
@@ -51,10 +52,17 @@ async def create_group(creator_id: UUID, group_data: dict, members_list: list[UU
     except Exception as e:
         await session.rollback()
         raise e
+    
+
+async def get_group_by_id(group_id: UUID, session: AsyncSession) -> Groups | None:
+    """Получение диалога по id"""
+    stmt = select(Groups).where(Groups.id == group_id)
+    group = await session.execute(stmt)
+    return group.scalar_one_or_none()
 
 
-async def check_users_exist(session: AsyncSession, user_ids: list[UUID]) -> bool:
-    """Проверить, что все пользователи существуют"""
-    stmt = select(func.count()).where(Users.id.in_(user_ids))
-    count = await session.scalar(stmt)
-    return count == len(user_ids)
+async def check_member_group(group_id: UUID, user_id: UUID, session: AsyncSession) -> bool:
+    """Проверка явления пользователя участником группы"""
+    stmt = select(GroupMembers).where(GroupMembers.group_id == group_id, GroupMembers.user_id == user_id)
+    member = await session.execute(stmt)
+    return member.scalar_one_or_none() is not None

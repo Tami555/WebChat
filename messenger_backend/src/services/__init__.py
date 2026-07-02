@@ -5,7 +5,8 @@ __all__ = (
     "SMSService",
     "MockSMSService",
     "GroupService",
-    "DialogService"
+    "DialogService",
+    "MessageService"
 )
 
 
@@ -15,6 +16,7 @@ from .verification_service import VerificationService
 from .sms_service import SMSService, MockSMSService
 from .group_service import GroupService
 from .dialog_service import DialogService
+from .message_service import MessageService
 
 
 # contact_service: получение, создание, редактирование, удаление и т.д кастомных имен, Поиск по именам 

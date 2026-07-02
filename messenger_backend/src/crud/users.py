@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -47,3 +47,10 @@ async def create_user(user_data: dict, session: AsyncSession) -> Users:
     session.add(new_user)
     await session.commit()
     return new_user
+
+
+async def check_users_exist(session: AsyncSession, user_ids: list[UUID]) -> bool:
+    """Проверить, что все пользователи существуют"""
+    stmt = select(func.count()).where(Users.id.in_(user_ids))
+    count = await session.scalar(stmt)
+    return count == len(user_ids)
