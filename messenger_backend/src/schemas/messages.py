@@ -37,6 +37,7 @@ class MessageCreate(BaseModel):
     content: str | None = None
     sticker_id: UUID | None = None
     reply_message_id: UUID | None = None
+    file_url: str | None = None
     created_at: datetime.datetime
 
     @staticmethod
@@ -47,8 +48,9 @@ class MessageCreate(BaseModel):
         content: str | None = Form(default=None),
         sticker_id: UUID | None = Form(default=None),
         reply_message_id: UUID | None = Form(default=None),
+        file_url: str | None = Form(default=None),
         created_at: datetime.datetime = Form(...),
-    ):
+    ) -> "MessageCreate":
         return MessageCreate(
             chat_id=chat_id,
             chat_type=chat_type,
@@ -56,5 +58,30 @@ class MessageCreate(BaseModel):
             content=content,
             sticker_id=sticker_id,
             reply_message_id=reply_message_id,
+            file_url=file_url,
             created_at=created_at
         )
+
+
+class UploadMessageFile(BaseModel):
+    chat_id: UUID
+    chat_type: ChatTypes
+    file_type: MessageTypes
+
+    @staticmethod
+    def upload_message_file_by_form(
+        chat_id: UUID = Form(...),
+        chat_type: ChatTypes = Form(...),
+        file_type: MessageTypes = Form(...)
+    ) -> "UploadMessageFile":
+        return UploadMessageFile(
+            chat_id=chat_id,
+            chat_type=chat_type,
+            file_type=file_type
+        )
+
+
+class SaveMessageFile(BaseModel):
+    chat_id: UUID
+    file_type: MessageTypes
+    username: str

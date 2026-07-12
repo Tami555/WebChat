@@ -7,7 +7,8 @@ __all__ = (
     "GroupService",
     "DialogService",
     "MessageService",
-    "StickerService"
+    "StickerService",
+    "FileService"
 )
 
 
@@ -19,6 +20,7 @@ from .group_service import GroupService
 from .dialog_service import DialogService
 from .sticker_service import StickerService
 from .message_service import MessageService
+from .file_service import FileService
 
 
 # contact_service: получение, создание, редактирование, удаление и т.д кастомных имен, Поиск по именам 

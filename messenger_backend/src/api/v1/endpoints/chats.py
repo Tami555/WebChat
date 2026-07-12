@@ -6,8 +6,8 @@ from fastapi import APIRouter, Depends, Query, UploadFile, Form
 import src.api.v1.dependencies as dependencies
 from src.core.database import database_helper
 from src.models import Users
-from src.schemas import AllChats, MessageResponse, MessageCreate
-from src.services import GroupService, DialogService, MessageService
+from src.schemas import AllChats, MessageResponse, MessageCreate, UploadMessageFile
+from src.services import GroupService, DialogService, MessageService, FileService
 from src.schemas.enums import ChatTypes
 
 
@@ -55,11 +55,39 @@ async def create_message(
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session)
 ):
-    """Создание сообщения"""
+    """Создание сообщения (для разработки)"""
+    if message_file is not None:
+        save_file_url = await FileService.upload_message_file(
+            upload_data=UploadMessageFile(
+                chat_id=message_data.chat_id,
+                chat_type=message_data.chat_type,
+                file_type=message_data.message_type
+            ),
+            upload_file=message_file,
+            user=user,
+            session=session,
+        )
+        message_data.file_url = save_file_url
     await MessageService.create_message(
         user=user,
         session=session,
-        message_data=message_data,
-        message_file=message_file
+        message_data=message_data
     )
     return "ok"
+
+
+@router.post("/messages/upload_file")
+async def upload_message_file(
+        upload_file: UploadFile,
+        upload_data: UploadMessageFile = Depends(UploadMessageFile.upload_message_file_by_form),
+        user: Users = Depends(dependencies.get_current_user),
+        session: AsyncSession = Depends(database_helper.create_scoped_session)
+):
+    """Загрузка файла сообщения"""
+    save_file_url = await FileService.upload_message_file(
+        upload_data=upload_data,
+        upload_file=upload_file,
+        user=user,
+        session=session,
+    )
+    return {"file_url": save_file_url}

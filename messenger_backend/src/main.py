@@ -1,6 +1,7 @@
 from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import settings
 from src.core.redis import redis_helper
@@ -23,6 +24,13 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(api_v1_router, prefix="/api/v1")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Разрешённые источники
+    allow_credentials=True,  # Разрешить отправку учётных данных (куки, Authorization)
+    allow_methods=["*"],  # Разрешить все HTTP-методы
+    allow_headers=["*"],  # Разрешить все заголовки
+)
 exception_handler(app)
 
 

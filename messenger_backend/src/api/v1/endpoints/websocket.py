@@ -23,8 +23,10 @@ async def create_connection(ws: WebSocket, user: Users = Depends(get_current_use
         # слушаем и отправляем сообщения
         while True:
             msg = await ws.receive_json()  # получили сообщение от клиента. Нужно отправить его другим
+
             create_msg_data = MessageCreate(**msg)
             print(f"Create message: {create_msg_data}")
+
             # Достаем id чата, получаем из БД всех отправителей и отправляем им через цикл
             users_from_chat = set(["tamiron_post", "anna_red", "sam", "lari_milord", "tobi"]) # Типо users из чата из БД. Половина онлайн\полповина нет
             all_online_users = set(await redis_helper.client.smembers(redis_helper.namespace.users_online))
