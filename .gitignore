@@ -4,6 +4,7 @@
 __pycache__/
 instance/
 .webassets-cache
+user_files/
 
 # PostgreSQL
 *.pid

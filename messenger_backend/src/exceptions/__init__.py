@@ -18,7 +18,12 @@ __all__ = (
     "DialogAlreadyExistsError",
     "DialogWithOneUserError",
     "DialogNotFoundError",
-    "UserIsNotDialogInterlocutor"
+    "UserIsNotDialogInterlocutor",
+    "MissedDataForMessageType",
+    "NotCorrectMessageTypeForFileType",
+    "MessageNotFoundError",
+    "FutureTimestampMessageError",
+    "StickerNotFoundError"
 )
 
 
@@ -29,3 +34,5 @@ from .users import UserNotFoundError, UserAlreadyExistsError, PhoneAlreadyExists
 from .verification import VerificationCodeExpiredError, InvalidVerificationCodeError, TooManyAttemptsError
 from .groups import MemberAlreadyExistsError, CreatorIsNotMember, RecurringMembers, GroupNotFoundError, UserIsNotGroupMember
 from .dialogs import DialogAlreadyExistsError, DialogWithOneUserError, DialogNotFoundError, UserIsNotDialogInterlocutor
+from .messages import MissedDataForMessageType, NotCorrectMessageTypeForFileType, MessageNotFoundError, FutureTimestampMessageError
+from .stickers import StickerNotFoundError

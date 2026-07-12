@@ -12,6 +12,7 @@ __all__ = (
     "ShortUserResponse",
     "ShortMessageResponse",
     "MessageResponse",
+    "MessageCreate",
     "Chat",
     "AllChats",
     "CreateGroup",
@@ -30,7 +31,7 @@ from .auth import (
     PhoneVerificationRequest, VerificationCodeResponse
 )
 from .users import UserResponse, ShortUserResponse
-from .messages import ShortMessageResponse, MessageResponse
+from .messages import ShortMessageResponse, MessageResponse, MessageCreate
 from .chats import Chat, AllChats
 from .groups import CreateGroup, GroupResponse, CreateGroupWithMembers
 from .dialogs import CreateDialog, DialogDetailResponse

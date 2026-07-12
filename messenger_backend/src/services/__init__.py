@@ -6,7 +6,8 @@ __all__ = (
     "MockSMSService",
     "GroupService",
     "DialogService",
-    "MessageService"
+    "MessageService",
+    "StickerService"
 )
 
 
@@ -16,6 +17,7 @@ from .verification_service import VerificationService
 from .sms_service import SMSService, MockSMSService
 from .group_service import GroupService
 from .dialog_service import DialogService
+from .sticker_service import StickerService
 from .message_service import MessageService
 
 

@@ -3,7 +3,7 @@ from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
-from src.models import Dialogs, Messages, MessageStatuses
+from src.models import Dialogs, Messages
 
 
 async def dialogs_by_user(user_id: UUID, session: AsyncSession) -> list[Dialogs]:
@@ -29,26 +29,6 @@ async def get_dialog_between_users(session: AsyncSession, user1_id: UUID, user2_
     )
     response = await session.execute(stmt)
     return response.scalar_one_or_none()
-
-
-async def unread_count_for_message(dialog_id: int, user_id: int, session: AsyncSession) -> int:
-    """Количество непрочитанных сообщений для пользователя в диалоге"""
-    stmt = select(func.count()
-    ).select_from(
-        Messages
-    ).where(
-        Messages.dialog_id == dialog_id,
-        Messages.sender_id != user_id,
-        Messages.is_deleted == False
-    ).join(
-        MessageStatuses,
-        MessageStatuses.message_id == Messages.id
-    ).where(
-            MessageStatuses.user_id == user_id,
-            MessageStatuses.is_read == False
-        )
-    count_messages = await session.execute(stmt)
-    return count_messages.scalar() or 0
 
 
 async def create_dialog(creator_id: UUID, interlocutor_id: UUID, session: AsyncSession) -> Dialogs:

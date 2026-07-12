@@ -1,12 +1,12 @@
 from uuid import UUID
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, UploadFile, Form
 
 import src.api.v1.dependencies as dependencies
 from src.core.database import database_helper
 from src.models import Users
-from src.schemas import AllChats, MessageResponse
+from src.schemas import AllChats, MessageResponse, MessageCreate
 from src.services import GroupService, DialogService, MessageService
 from src.schemas.enums import ChatTypes
 
@@ -46,3 +46,20 @@ async def get_chat_messages(
         limit=limit,
         session=session
     )
+
+
+@router.post("/messages/create")
+async def create_message(
+    message_data: MessageCreate = Depends(MessageCreate.create_message_by_form),
+    message_file: UploadFile | None = None,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session)
+):
+    """Создание сообщения"""
+    await MessageService.create_message(
+        user=user,
+        session=session,
+        message_data=message_data,
+        message_file=message_file
+    )
+    return "ok"
