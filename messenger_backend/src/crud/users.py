@@ -1,3 +1,4 @@
+from typing import Iterable
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload, selectinload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,6 +12,13 @@ async def get_user_by_id(id: UUID, session: AsyncSession) -> Users | None:
     stmt = select(Users).where(Users.id == id)
     result = await session.execute(stmt)
     return result.scalar_one_or_none()
+
+
+async def get_user_ids_by_usernames(usernames: Iterable[str], session: AsyncSession) -> list[UUID]:
+    """ Получение id пользователей по их именам """
+    stmt = select(Users.id).where(Users.username.in_(usernames))
+    result = await session.execute(stmt)
+    return [row[0] for row in result.all()]
 
 
 async def get_user_by_username(username: str, session: AsyncSession) -> Users | None:

@@ -61,3 +61,10 @@ async def get_dialog_by_id_with_relationships(dialog_id: UUID, session: AsyncSes
         )
     dialog = await session.scalar(stmt)
     return dialog
+
+
+async def set_last_message(dialog: Dialogs, last_message: Messages, session: AsyncSession) -> None:
+    """Установка последнего сообщения в диалоге"""
+    dialog.last_message = last_message
+    session.add(dialog)
+    await session.commit()

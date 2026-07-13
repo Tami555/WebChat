@@ -1,7 +1,7 @@
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Users, Dialogs
+from src.models import Users, Dialogs, Messages
 from src.crud import dialogs as crud, messages as msg_crud
 from src.schemas import Chat, CreateDialog
 from src.exceptions import DialogAlreadyExistsError, DialogWithOneUserError, DialogNotFoundError, UserIsNotDialogInterlocutor
@@ -10,6 +10,13 @@ from .user_service import UserService
 
 class DialogService:
     """Сервис чатов для двоих (диалогов)"""
+    @staticmethod
+    async def get_dialog_by_id(dialog_id: UUID, session: AsyncSession) -> Dialogs:
+        """Получение диалога по id"""
+        dialog = await crud.get_dialog_by_id(dialog_id, session)
+        if dialog is None:
+            raise DialogNotFoundError()
+        return dialog
 
     @staticmethod
     async def check_user_is_dialog_interlocutor(
@@ -19,13 +26,17 @@ class DialogService:
     ) -> bool:
         """Проверка, что пользователь является одним из собеседников диаолга"""
         # проверка что диалог существует
-        dialog = await crud.get_dialog_by_id(dialog_id, session)
-        if dialog is None:
-            raise DialogNotFoundError()
+        dialog = await DialogService.get_dialog_by_id(dialog_id, session)
         # проверка, является ли пользователь одним из собеседников
         if dialog.user1_id != user_id and dialog.user2_id != user_id:
             raise UserIsNotDialogInterlocutor()
         return True
+
+    @staticmethod
+    async def get_dialog_interlocutors_username(dialog_id: UUID, session: AsyncSession) -> set[str]:
+        """Получение username-ов участников диалога"""
+        dialog = await crud.get_dialog_by_id_with_relationships(dialog_id, session)
+        return {dialog.user1.username, dialog.user2.username}
 
     @staticmethod
     async def get_dialogs_by_user(user: Users, session: AsyncSession) -> list[Chat]:
@@ -63,6 +74,16 @@ class DialogService:
             session=session
         )
         return await crud.get_dialog_by_id_with_relationships(new_dialog.id, session)
+
+    @staticmethod
+    async def update_dialog_last_message(
+        dialog_id: UUID,
+        last_message: Messages,
+        session: AsyncSession
+    ):
+        """Обновление последнего сообщения в диалоге"""
+        dialog = await DialogService.get_dialog_by_id(dialog_id, session)
+        await crud.set_last_message(dialog, last_message, session)
 
     # Удаление
     # Получение всей инфы

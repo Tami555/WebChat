@@ -1,7 +1,7 @@
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Users, Groups
+from src.models import Users, Groups, Messages
 from src.crud import groups as group_crud, users as user_crud, messages as msg_crud
 from src.schemas import Chat, CreateGroupWithMembers
 from src.exceptions import CreatorIsNotMember, RecurringMembers, UserNotFoundError, GroupNotFoundError, UserIsNotGroupMember
@@ -9,6 +9,13 @@ from src.exceptions import CreatorIsNotMember, RecurringMembers, UserNotFoundErr
 
 class GroupService:
     """Сервис групповых чатов"""
+    @staticmethod
+    async def get_group_by_id(group_id: UUID, session: AsyncSession) -> Groups:
+        """Получение группы по id"""
+        group = await group_crud.get_group_by_id(group_id, session)
+        if group is None:
+            raise GroupNotFoundError()
+        return group
 
     @staticmethod
     async def check_user_in_group_members(
@@ -18,11 +25,9 @@ class GroupService:
     ) -> bool:
         """Проверка, что пользователь является участником группы"""
         # проверка что группа существует
-        group = await group_crud.get_group_by_id(group_id, session)
-        if group is None:
-            raise GroupNotFoundError()
+        await GroupService.get_group_by_id(group_id, session)
         # проверка, является ли пользователь участником группы
-        if not group_crud.check_member_group(group_id=group_id, user_id=user_id, session=session):
+        if not await group_crud.check_member_group(group_id=group_id, user_id=user_id, session=session):
             raise UserIsNotGroupMember()
         return True
     
@@ -42,6 +47,14 @@ class GroupService:
             )
             chats.append(chat)
         return chats
+
+    @staticmethod
+    async def get_group_members_username(group_id: UUID, session: AsyncSession) -> set[str]:
+        """Получение username-ов участников группы"""
+        group = await group_crud.get_group_with_members(group_id, session)
+        if group is None:
+            raise GroupNotFoundError()
+        return {member.member.username for member in group.group_members}
     
     @staticmethod
     async def create_group(creator: Users, create_group_data: CreateGroupWithMembers, session: AsyncSession) -> Groups:
@@ -65,6 +78,16 @@ class GroupService:
                 members_list=create_group_data.members,
                 session=session
             )
+
+    @staticmethod
+    async def update_group_last_message(
+            group_id: UUID,
+            last_message: Messages,
+            session: AsyncSession
+    ):
+        """Обновление последнего сообщения в группе"""
+        group = await GroupService.get_group_by_id(group_id, session)
+        await group_crud.set_last_message(group, last_message, session)
 
     # Добавление, удаление пользователей из группы
     # Изменение роли пользователя (нельзя лишить creater_user админства)

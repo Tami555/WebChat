@@ -1,64 +1,68 @@
+import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import WebSocket, APIRouter, Depends, WebSocketDisconnect, WebSocketException
 
 from src.models import Users
 from src.api.v1.dependencies import get_current_user_ws
 from src.core.websocket import websocket_manager
-from src.core.redis import redis_helper
+from src.core.database import database_helper
 from src.schemas import MessageCreate
+from src.services import WebsocketService
 
 
 router = APIRouter()
 
+# TODO: Поделить пользователей онлайн, кто находился просто в сети (read=False) и
+#  кто был прям в том же чате и точно прочитал сообщение (для status_message)
+
+# TODO: При чтении списка сообщений, те у кого в status_message read=False, должно измениться на True
+
 
 @router.websocket('/connect')
-async def create_connection(ws: WebSocket, user: Users = Depends(get_current_user_ws)):
-    sender_user = user.username
-    try: 
-        # TODO: сделать нормальный сервис
-        # подключились
+async def create_connection(
+    ws: WebSocket,
+    user: Users = Depends(get_current_user_ws),
+    session: AsyncSession = Depends(database_helper.create_scoped_session)
+):
+    """WebSocket соединение для чата"""
+    sender_user = user
+    sender_username = user.username
+    try:
+        # Подключаем пользователя
         await websocket_manager.connect(
-            username=sender_user,
+            username=sender_username,
             websocket=ws
         )
-        # слушаем и отправляем сообщения
+        # Основной цикл обработки сообщений
         while True:
-            msg = await ws.receive_json()  # получили сообщение от клиента. Нужно отправить его другим
+            try:
+                # сообщение от клиента
+                raw_data = await ws.receive_json()
+                message_data = MessageCreate(**raw_data)
+                message_data.created_at = datetime.datetime.now()
 
-            create_msg_data = MessageCreate(**msg)
-            print(f"Create message: {create_msg_data}")
-
-            # Достаем id чата, получаем из БД всех отправителей и отправляем им через цикл
-            users_from_chat = set(["tamiron_post", "anna_red", "sam", "lari_milord", "tobi"]) # Типо users из чата из БД. Половина онлайн\полповина нет
-            all_online_users = set(await redis_helper.client.smembers(redis_helper.namespace.users_online))
-
-            users_online = users_from_chat & all_online_users
-            users_notifications = users_from_chat - all_online_users
-
-            print(f"В принципе онлайн: {all_online_users}; Наши онлайн: {users_online}")
-            print(f"Уведомлния для: {users_notifications}")
-
-            # Тем которые онлайн отправляем через WS
-            success_send_users = [] # Список тех кто прям реально прочитал: для message_statuses, is_read = True
-            for user in users_online:
-                is_success = await websocket_manager.send_to_user(
-                    from_username=sender_user,
-                    to_username=user,
-                    data=msg
+                # Обрабатываем сообщение
+                result = await WebsocketService.process_message(
+                    sender_user=sender_user,
+                    message_data=message_data,
+                    session=session
                 )
-                if not is_success:
-                    users_notifications.add(user)
-                else:
-                    success_send_users.append(user)
-            # Записываем сообщение в БД
+                # Отправляем подтверждение отправителю
+                await ws.send_json(result)
 
-            # Тем которые Нет отправляем уведомление
-            for user in users_notifications:
-                print(f"Уведомления для {user}")
-
+            except (WebSocketDisconnect, WebSocketException):
+                break
+            except Exception as e:
+                # TODO: заменить на логирование
+                print(f"Ошибка отправке сообщения: {e}")
+                await ws.send_json({
+                    "status": "error",
+                    "error": str(e)
+                })
     except (WebSocketDisconnect, WebSocketException):
-        await websocket_manager.disconnect(sender_user)
-
-        
-
-
-
+        print(f"User {sender_username} disconnected")
+    except Exception as e:
+        print(f"WebSocket error: {e}")
+    finally:
+        # Отключаем пользователя
+        await websocket_manager.disconnect(sender_username)

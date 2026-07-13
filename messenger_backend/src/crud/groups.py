@@ -41,8 +41,25 @@ async def get_group_by_id(group_id: UUID, session: AsyncSession) -> Groups | Non
     return group.scalar_one_or_none()
 
 
+async def get_group_with_members(group_id: UUID, session: AsyncSession) -> Groups | None:
+    """Получение группы по id с участниками"""
+    stmt = (select(Groups)
+            .options(selectinload(Groups.group_members).joinedload(GroupMembers.member))
+            .where(Groups.id == group_id)
+            )
+    group = await session.execute(stmt)
+    return group.scalar_one_or_none()
+
+
 async def check_member_group(group_id: UUID, user_id: UUID, session: AsyncSession) -> bool:
     """Проверка явления пользователя участником группы"""
     stmt = select(GroupMembers).where(GroupMembers.group_id == group_id, GroupMembers.user_id == user_id)
     member = await session.execute(stmt)
     return member.scalar_one_or_none() is not None
+
+
+async def set_last_message(group: Groups, last_message: Messages, session: AsyncSession) -> None:
+    """Установка последнего сообщения в диалоге"""
+    group.last_message = last_message
+    session.add(group)
+    await session.commit()

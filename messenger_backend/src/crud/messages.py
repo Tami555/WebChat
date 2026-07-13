@@ -1,3 +1,5 @@
+import datetime
+from typing import Iterable
 from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -61,12 +63,49 @@ async def get_message_by_id(message_id: UUID, session: AsyncSession) -> Messages
     return res.scalar_one_or_none()
 
 
+async def get_message_by_id_with_relationships(message_id: UUID, session: AsyncSession) -> Messages | None:
+    """ Получение сообщения по id с подгрузкой связей"""
+    stmt = select(Messages).where(Messages.id == message_id).options(
+        joinedload(Messages.sender),
+        joinedload(Messages.sticker),
+        joinedload(Messages.reply_message).joinedload(Messages.sender),
+        joinedload(Messages.reply_message).joinedload(Messages.sticker),
+    )
+    res = await session.execute(stmt)
+    return res.scalar_one_or_none()
+
+
 async def create_message(message: Messages, session: AsyncSession) -> Messages:
     """Создание сообщения cо статусами для получателей"""
     session.add(message)
     await session.commit()
+    return message
 
-    # TODO: статусы чтения сообщения для всех получателей
-    # TODO: сообщение должно стать последним в чате
 
+async def create_message_statuses(
+        message: Messages,
+        read_users_ids: Iterable[UUID],
+        not_read_users_ids: Iterable[UUID],
+        read_at: datetime.datetime,
+        session: AsyncSession
+) -> None:
+    """Создание статусов чтения для сообщения"""
+    statuses = []
+    for user_id in read_users_ids:
+        statuses.append(MessageStatuses(
+            message_id=message.id,
+            user_id=user_id,
+            is_read=True,
+            read_at=read_at
+        ))
+    for user_id in not_read_users_ids:
+        statuses.append(MessageStatuses(
+            message_id=message.id,
+            user_id=user_id,
+            is_read=False,
+            read_at=None
+        ))
+    if statuses:
+        session.add_all(statuses)
+        await session.commit()
 

@@ -46,12 +46,30 @@ class MessageService:
             session=session
         )
         return messages
+
+    @staticmethod
+    async def get_chat_participants_username(
+        chat_id: UUID,
+        chat_type: ChatTypes,
+        session: AsyncSession
+    ) -> set[str]:
+        """Получение username-ов участников чата"""
+        if chat_type == ChatTypes.DIALOGS:
+            return await DialogService.get_dialog_interlocutors_username(
+                dialog_id=chat_id,
+                session=session
+            )
+        elif chat_type == ChatTypes.GROUP:
+            return await GroupService.get_group_members_username(
+                group_id=chat_id,
+                session=session
+            )
+        return set()
             
     @staticmethod
     async def create_message(
         user: Users,
         session: AsyncSession,
-        # users_already_read_message: list[UUID | str],
         message_data: MessageCreate,
     ) -> Messages:
         """Создание сообщения в чате"""
@@ -62,7 +80,7 @@ class MessageService:
             chat_type=message_data.chat_type,
             session=session
         )
-        # Проверка на тип сообщения и наличие его содержимого (TEXT -> content и т.д)
+        # Проверка на тип сообщения и наличие его содержимого
         match message_data.message_type:
             case msg_type if msg_type in [MessageTypes.TEXT, MessageTypes.SYSTEM] and message_data.content is None:
                 raise MissedDataForMessageType(msg_type, ('content',))
@@ -99,6 +117,51 @@ class MessageService:
             reply_to_id=message_data.reply_message_id,
             created_at=message_data.created_at
         )
-        # TODO: добавить список получателей для Message_Status
-        # TODO: сообщение должно стать последним в чате
-        return await msg_crud.create_message(new_message, session)
+        created_message = await msg_crud.create_message(new_message, session)
+
+        # Обновляем last_message
+        await MessageService.update_chat_last_message(
+            chat_id=message_data.chat_id,
+            chat_type=message_data.chat_type,
+            last_message=created_message,
+            session=session
+        )
+        return await msg_crud.get_message_by_id_with_relationships(created_message.id, session)
+
+    @staticmethod
+    async def update_chat_last_message(
+        chat_id: UUID,
+        chat_type: ChatTypes,
+        last_message: Messages,
+        session: AsyncSession
+    ):
+        """Обновление последнего сообщения в чате"""
+        if chat_type == ChatTypes.DIALOGS:
+            await DialogService.update_dialog_last_message(
+                dialog_id=chat_id,
+                last_message=last_message,
+                session=session
+            )
+        elif chat_type == ChatTypes.GROUP:
+            await GroupService.update_group_last_message(
+                group_id=chat_id,
+                last_message=last_message,
+                session=session
+            )
+
+    @staticmethod
+    async def create_message_statuses(
+        message: Messages,
+        read_users_ids: list[UUID],
+        not_read_users_ids: list[UUID],
+        read_at: datetime.datetime,
+        session: AsyncSession,
+    ) -> None:
+        """Создание статусов чтения сообщения для участников"""
+        return await msg_crud.create_message_statuses(
+            message=message,
+            read_users_ids=read_users_ids,
+            not_read_users_ids=not_read_users_ids,
+            read_at=read_at,
+            session=session
+        )
