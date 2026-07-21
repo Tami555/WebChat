@@ -36,7 +36,7 @@ async def get_chat_messages(
     limit: Annotated[int, Query] = 50,
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session)
-) -> list[MessageResponse]:
+):
     """ Получить сообщения из чата с лимитом"""
     return await MessageService.get_messages_by_chat(
         user=user,

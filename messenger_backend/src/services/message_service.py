@@ -45,6 +45,14 @@ class MessageService:
             limit=limit,
             session=session
         )
+        if messages:
+            # Отмечаем сообщения как прочитанные
+            await msg_crud.mark_messages_as_read_by_chat(
+                user_id=user.id,
+                group_id=chat_id if chat_type is ChatTypes.GROUP else None,
+                dialog_id=chat_id if chat_type is ChatTypes.DIALOGS else None,
+                session=session
+            )
         return messages
 
     @staticmethod

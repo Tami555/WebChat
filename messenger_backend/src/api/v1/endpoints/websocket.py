@@ -8,11 +8,7 @@ from src.core.websocket import websocket_manager, WebSocketDispatcher
 
 
 router = APIRouter()
-# Диспетчер
 dispatcher = WebSocketDispatcher()
-
-
-# TODO: При чтении списка сообщений, те у кого в status_message read=False, должно измениться на True
 
 
 @router.websocket('/connect')

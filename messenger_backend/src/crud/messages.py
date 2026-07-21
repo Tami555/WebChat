@@ -1,6 +1,6 @@
 import datetime
 from typing import Iterable
-from sqlalchemy import select, func
+from sqlalchemy import select, func, update
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -43,7 +43,9 @@ async def messages_by_dialog_or_group(
 ) -> list[Messages]:
     """Получение сообщений чатов (группы или диалога) с пагинацией"""
     stmt = select(Messages)\
-        .where(Messages.dialog_id == dialog_id, Messages.group_id == group_id, Messages.is_deleted == False)\
+        .where(Messages.dialog_id == dialog_id,
+               Messages.group_id == group_id,
+               Messages.is_deleted == False)\
         .options(
             joinedload(Messages.sender),
             joinedload(Messages.reply_message),
@@ -53,7 +55,37 @@ async def messages_by_dialog_or_group(
         .order_by(Messages.created_at)\
         .offset((page - 1) * limit)
     messages = await session.scalars(stmt)
-    return messages.all()
+    return list(messages.all())
+
+
+async def mark_messages_as_read_by_chat(
+    user_id: UUID,
+    session: AsyncSession,
+    dialog_id: UUID | None = None,
+    group_id: UUID | None = None,
+):
+    """Отметить все непрочитанные сообщения в чате как прочитанные"""
+    stmt = (
+        update(MessageStatuses)
+        .where(
+            MessageStatuses.user_id == user_id,
+            MessageStatuses.is_read == False,
+            MessageStatuses.message_id.in_(
+                select(Messages.id)
+                .where(
+                    Messages.dialog_id == dialog_id,
+                    Messages.group_id == group_id,
+                    Messages.sender_id != user_id
+                )
+            )
+        )
+        .values(
+            is_read=True,
+            read_at=datetime.datetime.now()
+        )
+    )
+    await session.execute(stmt)
+    await session.commit()
 
 
 async def get_message_by_id(message_id: UUID, session: AsyncSession) -> Messages | None:
