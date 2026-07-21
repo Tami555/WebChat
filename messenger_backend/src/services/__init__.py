@@ -9,8 +9,7 @@ __all__ = (
     "MessageService",
     "StickerService",
     "FileService",
-    "NotificationService",
-    "WebsocketService"
+    "NotificationService"
 )
 
 
@@ -24,7 +23,6 @@ from .sticker_service import StickerService
 from .message_service import MessageService
 from .file_service import FileService
 from .notification_service import NotificationService
-from .websocket_service import WebsocketService
 
 
 # contact_service: получение, создание, редактирование, удаление и т.д кастомных имен, Поиск по именам 

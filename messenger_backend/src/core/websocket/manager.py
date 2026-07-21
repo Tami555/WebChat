@@ -1,18 +1,22 @@
 import asyncio
 import json
+from uuid import UUID
 from fastapi import WebSocket
 
 from src.core.redis import redis_helper
+from src.schemas.enums import ChatTypes
 
 
 class WebsocketManager:
     def __init__(self):
         self.active_connections: dict[str, WebSocket] = {}
+        self.user_current_chat: dict[str, tuple[UUID, ChatTypes] | None] = {}
         self.server_id = None
         self.pubsub = None
         self._initialized = False
     
     async def initialize(self, server_id: str = "server-1"):
+        """Инициализация сервера, где доступны WebSocket соединения"""
         if self._initialized:
             return
         self.server_id = server_id
@@ -21,15 +25,21 @@ class WebsocketManager:
         self._initialized = True
 
     async def connect(self, username: str, websocket: WebSocket):
+        """Подключение пользователя к WebSocket соединению"""
         await websocket.accept()
         self.active_connections[username] = websocket
+        self.user_current_chat[username] = None
         # Работа с Redis
         user_server_key = redis_helper.create_key(redis_helper.namespace.ws_server_user, username)
-        await redis_helper.client.set(user_server_key, self.server_id) # на каком user сервере (PUB\SUB)
-        await redis_helper.client.sadd(redis_helper.namespace.users_online, username) # в redis, что user в онлайне
+        await redis_helper.client.set(user_server_key, self.server_id)  # на каком user сервере (PUB\SUB)
+        await redis_helper.client.sadd(redis_helper.namespace.users_online, username)  # в redis, что user в онлайне
 
     async def disconnect(self, username: str):
-        del self.active_connections[username]
+        """Отключение пользователя от WebSocket соединения"""
+        if username in self.active_connections:
+            del self.active_connections[username]
+        if username in self.user_current_chat:
+            del self.user_current_chat[username]
         # Работа с Redis
         user_server_key = redis_helper.create_key(redis_helper.namespace.ws_server_user, username)
         await redis_helper.client.delete(user_server_key) # удаляем с PUB\SUB
@@ -54,7 +64,25 @@ class WebsocketManager:
                 )
                 return True
             return False
-            
+
+    def set_user_chat(self, username: str, chat_id: UUID, chat_type: ChatTypes):
+        """Установить текущий чат пользователя"""
+        if username in self.user_current_chat:
+            self.user_current_chat[username] = (chat_id, chat_type)
+            return True
+        return False
+
+    def clear_user_chat(self, username: str):
+        """Очистить текущий чат пользователя (вышел из чата)"""
+        if username in self.user_current_chat:
+            self.user_current_chat[username] = None
+            return True
+        return False
+
+    def get_user_chat(self, username: str) -> tuple[UUID, ChatTypes] | None:
+        """Получить текущий чат пользователя"""
+        return self.user_current_chat.get(username)
+
     async def _listen_to_pubsub(self):
         pubsub_server_key = redis_helper.create_key(redis_helper.namespace.pubsub_server, self.server_id)
         await self.pubsub.subscribe(pubsub_server_key)
