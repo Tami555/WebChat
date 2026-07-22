@@ -37,4 +37,4 @@ class DatabaseHelper:
         await session.remove()
 
 
-database_helper = DatabaseHelper(settings.db_async_url)
+database_helper = DatabaseHelper(settings.db.db_async_url)

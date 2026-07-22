@@ -36,7 +36,7 @@ exception_handler(app)
 
 @app.get("/app")
 def health():
-    return {"status": "ok", "db": settings.db_async_url}
+    return {"status": "ok", "db": settings.db.db_async_url}
 
 
 if __name__ == "__main__":

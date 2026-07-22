@@ -7,23 +7,47 @@ BASE_PATH = Path(__file__).parent.parent.parent.parent
 
 
 class VerificationConfig(BaseModel):
-    code_ttl: int =  300
+    """Конфигурация верификации номера телефона"""
+    code_ttl: int = 300  # 5 минут
     max_attempts: int = 3
 
 
+class DatabaseConfig(BaseModel):
+    """Конфигурация Базы данных"""
+    user: str = ""
+    password: str = ""
+    name: str = ""
+    host: str = "localhost"
+    port: str = 5432
+
+    @property
+    def db_async_url(self) -> str:
+        return f"postgresql+asyncpg://{self.user}:{self.password}@{self.host}:{self.port}/{self.name}"
+
+
+class AuthenticationConfig(BaseModel):
+    """Конфигурация Авторизации/Аутентификации"""
+    app_secret_key: str = ""
+    jwt_algorithm: str = "HS256"
+    expire_access_token_minutes: int = 60  # 1 час
+    expire_refresh_token_minutes: int = 43200  # 30 дней
+
+
 class RedisNamespaces(BaseSettings):
+    """Названия ключей Redis"""
     phone_verification: str = "phone:verification"
     users_online: str = "online:users"
     ws_server_user: str = "ws:server"
     pubsub_server: str = "pubsub:server"
 
 
-class RedisConfig(BaseSettings):    
+class RedisConfig(BaseSettings):
+    """Конфигурация Redis"""
     host: str = "localhost"
     port: int = 6379
-    db: int = 0    
+    db: int = 0
     namespaces: RedisNamespaces = RedisNamespaces()
-    
+
     @property
     def url(self) -> str:
         """URL для подключения к Redis"""
@@ -31,32 +55,17 @@ class RedisConfig(BaseSettings):
 
 
 class Settings(BaseSettings):
-    # Database
-    db_user: str
-    db_password: str
-    db_name: str
-    db_host: str = "localhost"
-    db_port: str = 5432
-
-    @property
-    def db_async_url(self) -> str:
-        return f"postgresql+asyncpg://{self.db_user}:{self.db_password}@{self.db_host}:{self.db_port}/{self.db_name}"
-
-    # JWT Authentication
-    app_secret_key: str
-    jwt_algorithm: str = "HS256"
-    expire_access_token_minutes: int = 60 # 1 час
-    expire_refresh_token_minutes: int = 43200 # 30 дней
-
-    # Redis
-    redis: RedisConfig = RedisConfig()
-
-    # Верификация номера телефона
     verification: VerificationConfig = VerificationConfig()
+    db: DatabaseConfig = DatabaseConfig()
+    auth: AuthenticationConfig = AuthenticationConfig()
+    redis: RedisConfig = RedisConfig()
 
     model_config = SettingsConfigDict(
         env_file=BASE_PATH / ".env",
-        env_file_encoding="utf-8"
+        env_file_encoding="utf-8",
+        env_nested_delimiter="__",
+        env_prefix="WEBCHAT_",
+        case_sensitive=False,
     )
 
 

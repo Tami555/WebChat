@@ -7,8 +7,8 @@ def create_jwt_token(
         type_token: TokenType,
         payload: dict,
         expire_minutes: int,
-        secret_key: str = settings.app_secret_key,
-        algorithm: str = settings.jwt_algorithm
+        secret_key: str = settings.auth.app_secret_key,
+        algorithm: str = settings.auth.jwt_algorithm
 ) -> bytes:
     """ Генерация jwt токена по типу """
     jwt_payload = {"type": type_token}

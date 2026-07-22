@@ -12,7 +12,7 @@ def create_access_token(user: Users):
     return create_jwt_token(
         type_token=TokenType.ACCESS_TOKEN,
         payload=payload,
-        expire_minutes=settings.expire_access_token_minutes
+        expire_minutes=settings.auth.expire_access_token_minutes
     )
 
 
@@ -22,7 +22,7 @@ def create_refresh_token(user: Users):
     return create_jwt_token(
         type_token=TokenType.REFRESH_TOKEN,
         payload=payload,
-        expire_minutes=settings.expire_refresh_token_minutes
+        expire_minutes=settings.auth.expire_refresh_token_minutes
     )
 
 
