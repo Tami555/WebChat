@@ -4,7 +4,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from src.core.config import settings
-from src.core.redis import redis_helper
+from src.core.redis import online_redis, redis_manager
 from src.exceptions import exception_handler
 from src.api.v1 import router as api_v1_router
 from src.core.websocket import websocket_manager
@@ -14,11 +14,11 @@ from src.core.websocket import websocket_manager
 async def lifespan(app: FastAPI):
     print("START BACKEND")
     print(f"APP ID : {id(app)}")
-    await redis_helper.connect()
+    await redis_manager.connect()
     await websocket_manager.initialize(server_id=f"server-{id(app)}")
-    print(f"Кто онлайн: {await redis_helper.client.smembers(redis_helper.namespace.users_online)}")
+    print(f"Кто онлайн: {await online_redis.get_all_online()}")
     yield
-    await redis_helper.disconnect()
+    await redis_manager.disconnect()
     print("STOP BACKEND")
 
 

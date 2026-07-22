@@ -3,7 +3,7 @@ import json
 from uuid import UUID
 from fastapi import WebSocket
 
-from src.core.redis import redis_helper
+from src.core.redis import online_redis, pubsub_redis
 from src.schemas.enums import ChatTypes
 
 
@@ -20,7 +20,7 @@ class WebsocketManager:
         if self._initialized:
             return
         self.server_id = server_id
-        self.pubsub = redis_helper.client.pubsub()
+        self.pubsub = pubsub_redis.get_pubsub()
         asyncio.create_task(self._listen_to_pubsub())
         self._initialized = True
 
@@ -30,9 +30,7 @@ class WebsocketManager:
         self.active_connections[username] = websocket
         self.user_current_chat[username] = None
         # Работа с Redis
-        user_server_key = redis_helper.create_key(redis_helper.namespace.ws_server_user, username)
-        await redis_helper.client.set(user_server_key, self.server_id)  # на каком user сервере (PUB\SUB)
-        await redis_helper.client.sadd(redis_helper.namespace.users_online, username)  # в redis, что user в онлайне
+        await online_redis.add_user(username=username, server_id=self.server_id)
 
     async def disconnect(self, username: str):
         """Отключение пользователя от WebSocket соединения"""
@@ -41,9 +39,7 @@ class WebsocketManager:
         if username in self.user_current_chat:
             del self.user_current_chat[username]
         # Работа с Redis
-        user_server_key = redis_helper.create_key(redis_helper.namespace.ws_server_user, username)
-        await redis_helper.client.delete(user_server_key) # удаляем с PUB\SUB
-        await redis_helper.client.srem(redis_helper.namespace.users_online, username) # Не онлайн
+        await online_redis.remove_user(username)
 
     async def send_to_user(self, from_username: str, to_username: str, data: dict) -> bool:
         """Отправляет сообщение через WebSocket если пользователь онлайн"""
@@ -52,15 +48,12 @@ class WebsocketManager:
             await self.active_connections[to_username].send_json(data)
             return True
         else: 
-            # Выяснеем на каком сервере получатель и отправляем туда
-            to_user_server_key = redis_helper.create_key(redis_helper.namespace.ws_server_user, to_username)
-            server = await redis_helper.client.get(to_user_server_key)
+            # Выясняем на каком сервере получатель и отправляем туда
+            server = await online_redis.get_user_server(username=to_username)
             if server:
-                to_pubsub_server_key = redis_helper.create_key(redis_helper.namespace.pubsub_server, server)
-                # Публикуем в канал этого сервера
-                await redis_helper.client.publish(
-                    to_pubsub_server_key,
-                    json.dumps({"to_username": to_username, "data": data})
+                await pubsub_redis.publish_to_server(
+                    server_id=server,
+                    data={"to_username": to_username, "data": data}
                 )
                 return True
             return False
@@ -84,7 +77,7 @@ class WebsocketManager:
         return self.user_current_chat.get(username)
 
     async def _listen_to_pubsub(self):
-        pubsub_server_key = redis_helper.create_key(redis_helper.namespace.pubsub_server, self.server_id)
+        pubsub_server_key = pubsub_redis.get_channel(server_id=self.server_id)
         await self.pubsub.subscribe(pubsub_server_key)
 
         async for message in self.pubsub.listen():

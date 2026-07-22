@@ -6,7 +6,7 @@ from src.schemas import MessageCreate, MessageResponse
 from src.schemas.enums import ChatTypes
 from src.services import MessageService, UserService, NotificationService
 from src.models import Users
-from src.core.redis import redis_helper
+from src.core.redis import online_redis
 from src.core.websocket.manager import websocket_manager
 
 
@@ -34,7 +34,7 @@ class WebsocketService:
             chat_type=message_data.chat_type,
             session=session
         )
-        all_online = await redis_helper.client.smembers(redis_helper.namespace.users_online)
+        all_online = await online_redis.get_all_online()
         online_users = chat_participants & all_online
         offline_users = chat_participants - all_online
 
