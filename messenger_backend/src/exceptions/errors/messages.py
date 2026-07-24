@@ -1,9 +1,9 @@
 from fastapi import status
 
-from .base import BaseAppException
+from ..base import BaseAppException
 
 
-class MissedDataForMessageType(BaseAppException):
+class MissedDataForMessageTypeError(BaseAppException):
     """Сообщение определенного типа не содержит необходимые атрибуты данных"""
     def __init__(self, message_type: str, data: tuple):
         super().__init__(
@@ -12,7 +12,7 @@ class MissedDataForMessageType(BaseAppException):
         )
 
 
-class NotCorrectMessageTypeForFileType(BaseAppException):
+class NotCorrectMessageTypeForFileTypeError(BaseAppException):
     """Тип сообщения не соответствует переданному типу файла"""
     def __init__(self, message_type: str, file_type: str):
         super().__init__(

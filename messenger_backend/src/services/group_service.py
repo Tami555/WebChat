@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import Users, Groups, Messages
 from src.crud import GroupCRUD, UserCRUD, MessageCRUD
 from src.schemas import Chat, CreateGroupWithMembers
-from src.exceptions import CreatorIsNotMember, RecurringMembers, UserNotFoundError, GroupNotFoundError, UserIsNotGroupMember
+from src.exceptions import CreatorIsNotMemberError, RecurringMembersError, UserNotFoundError, GroupNotFoundError, UserIsNotGroupMemberError
 
 
 class GroupService:
@@ -28,7 +28,7 @@ class GroupService:
         await GroupService.get_group_by_id(group_id, session)
         # проверка, является ли пользователь участником группы
         if not await GroupCRUD.check_member_group(group_id=group_id, user_id=user_id, session=session):
-            raise UserIsNotGroupMember()
+            raise UserIsNotGroupMemberError()
         return True
     
     @staticmethod
@@ -64,10 +64,10 @@ class GroupService:
 
         # проверка, что создателя нет в участниках
         if creator.id in create_group_data.members:
-            raise CreatorIsNotMember()
+            raise CreatorIsNotMemberError()
         # проверка, что все участники уникальны
         if len(create_group_data.members) != len(set(create_group_data.members)):
-            raise RecurringMembers()
+            raise RecurringMembersError()
         # проверка, что все участники (id) существуют
         if not await UserCRUD.check_users_exist(session, create_group_data.members):
             raise UserNotFoundError()

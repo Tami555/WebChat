@@ -1,6 +1,6 @@
 from fastapi import status
 
-from .base import BaseAppException
+from ..base import BaseAppException
 
 
 class DialogAlreadyExistsError(BaseAppException):
@@ -30,7 +30,7 @@ class DialogNotFoundError(BaseAppException):
         )
 
 
-class UserIsNotDialogInterlocutor(BaseAppException):
+class UserIsNotDialogInterlocutorError(BaseAppException):
     """ Пользователь не является участником диалога """
     def __init__(self):
         super().__init__(

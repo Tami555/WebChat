@@ -1,20 +1,20 @@
 from fastapi import status
 from uuid import UUID
 
-from .base import BaseAppException
+from ..base import BaseAppException
 
 
 class MemberAlreadyExistsError(BaseAppException):
     """ Участник уже есть в группе """
-    def __init__(self, id: UUID):
+    def __init__(self, user_id: UUID):
         super().__init__(
-            message=f"Участник с таким {id} уже есть в группе",
+            message=f"Участник с таким {user_id} уже есть в группе",
             status_code=status.HTTP_409_CONFLICT
         )
 
 
-class RecurringMembers(BaseAppException):
-    """ Повторение участников (при создании\обновлении) """
+class RecurringMembersError(BaseAppException):
+    """ Повторение участников (при создании/обновлении) """
     def __init__(self):
         super().__init__(
             message=f"Участники не могут повторяться",
@@ -22,7 +22,7 @@ class RecurringMembers(BaseAppException):
         )
 
 
-class CreatorIsNotMember(BaseAppException):
+class CreatorIsNotMemberError(BaseAppException):
     """ Создатель группы не может быть просто участником (он админ)"""
     def __init__(self):
         super().__init__(
@@ -40,7 +40,7 @@ class GroupNotFoundError(BaseAppException):
         )
 
 
-class UserIsNotGroupMember(BaseAppException):
+class UserIsNotGroupMemberError(BaseAppException):
     """ Пользователь не является участником группы """
     def __init__(self):
         super().__init__(

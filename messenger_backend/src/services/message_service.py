@@ -7,7 +7,7 @@ from src.crud import MessageCRUD
 from src.models import Messages, Users
 from src.schemas.enums import ChatTypes, MessageTypes
 from src.schemas import MessageCreate
-from src.exceptions import MissedDataForMessageType, MessageNotFoundError, FutureTimestampMessageError
+from src.exceptions import MissedDataForMessageTypeError, MessageNotFoundError, FutureTimestampMessageError
 
 
 class MessageService:
@@ -91,14 +91,14 @@ class MessageService:
         # Проверка на тип сообщения и наличие его содержимого
         match message_data.message_type:
             case msg_type if msg_type in [MessageTypes.TEXT, MessageTypes.SYSTEM] and message_data.content is None:
-                raise MissedDataForMessageType(msg_type, ('content',))
+                raise MissedDataForMessageTypeError(msg_type, ('content',))
             
             case msg_type if msg_type is MessageTypes.STICKER and message_data.sticker_id is None:
-                raise MissedDataForMessageType(msg_type, ('sticker_id',))
+                raise MissedDataForMessageTypeError(msg_type, ('sticker_id',))
             
             case msg_type if (msg_type in [MessageTypes.IMAGE, MessageTypes.VOICE, MessageTypes.FILE] and
                               message_data.file_url is None):
-                raise MissedDataForMessageType(msg_type, ('message_file',))
+                raise MissedDataForMessageTypeError(msg_type, ('message_file',))
             
         # Проверка существования сообщения ответа
         if (message_data.reply_message_id is not None and

@@ -11,16 +11,16 @@ __all__ = (
     "InvalidVerificationCodeError",
     "TooManyAttemptsError",
     "MemberAlreadyExistsError",
-    "CreatorIsNotMember",
-    "RecurringMembers",
+    "CreatorIsNotMemberError",
+    "RecurringMembersError",
     "GroupNotFoundError",
-    "UserIsNotGroupMember",
+    "UserIsNotGroupMemberError",
     "DialogAlreadyExistsError",
     "DialogWithOneUserError",
     "DialogNotFoundError",
-    "UserIsNotDialogInterlocutor",
-    "MissedDataForMessageType",
-    "NotCorrectMessageTypeForFileType",
+    "UserIsNotDialogInterlocutorError",
+    "MissedDataForMessageTypeError",
+    "NotCorrectMessageTypeForFileTypeError",
     "MessageNotFoundError",
     "FutureTimestampMessageError",
     "StickerNotFoundError"
@@ -29,10 +29,14 @@ __all__ = (
 
 from .handler import exception_handler
 from .base import BaseAppException
-from .auth import InvalidTokenError, TokenTypeMismatchError
-from .users import UserNotFoundError, UserAlreadyExistsError, PhoneAlreadyExistsError, UsernameAlreadyExistsError
-from .verification import VerificationCodeExpiredError, InvalidVerificationCodeError, TooManyAttemptsError
-from .groups import MemberAlreadyExistsError, CreatorIsNotMember, RecurringMembers, GroupNotFoundError, UserIsNotGroupMember
-from .dialogs import DialogAlreadyExistsError, DialogWithOneUserError, DialogNotFoundError, UserIsNotDialogInterlocutor
-from .messages import MissedDataForMessageType, NotCorrectMessageTypeForFileType, MessageNotFoundError, FutureTimestampMessageError
-from .stickers import StickerNotFoundError
+from .errors.auth import InvalidTokenError, TokenTypeMismatchError
+from .errors.users import (UserNotFoundError, UserAlreadyExistsError,
+                           PhoneAlreadyExistsError, UsernameAlreadyExistsError)
+from .errors.verification import VerificationCodeExpiredError, InvalidVerificationCodeError, TooManyAttemptsError
+from .errors.groups import (MemberAlreadyExistsError, CreatorIsNotMemberError, RecurringMembersError,
+                            GroupNotFoundError, UserIsNotGroupMemberError)
+from .errors.dialogs import (DialogAlreadyExistsError, DialogWithOneUserError,
+                             DialogNotFoundError, UserIsNotDialogInterlocutorError)
+from .errors.messages import (MissedDataForMessageTypeError, NotCorrectMessageTypeForFileTypeError,
+                              MessageNotFoundError, FutureTimestampMessageError)
+from .errors.stickers import StickerNotFoundError

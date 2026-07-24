@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from src.models import Users, Dialogs, Messages
 from src.crud import DialogCRUD, MessageCRUD
 from src.schemas import Chat, CreateDialog
-from src.exceptions import DialogAlreadyExistsError, DialogWithOneUserError, DialogNotFoundError, UserIsNotDialogInterlocutor
+from src.exceptions import DialogAlreadyExistsError, DialogWithOneUserError, DialogNotFoundError, UserIsNotDialogInterlocutorError
 from .user_service import UserService
 
 
@@ -29,7 +29,7 @@ class DialogService:
         dialog = await DialogService.get_dialog_by_id(dialog_id, session)
         # проверка, является ли пользователь одним из собеседников
         if dialog.user1_id != user_id and dialog.user2_id != user_id:
-            raise UserIsNotDialogInterlocutor()
+            raise UserIsNotDialogInterlocutorError()
         return True
 
     @staticmethod

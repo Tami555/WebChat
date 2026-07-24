@@ -4,7 +4,7 @@ from fastapi import UploadFile
 from src.schemas import UploadMessageFile, SaveMessageFile
 from src.models import Users
 from src.utils.files import determining_file_type, FileManager, LocalFileManager
-from src.exceptions import NotCorrectMessageTypeForFileType
+from src.exceptions import NotCorrectMessageTypeForFileTypeError
 from src.services import MessageService
 
 
@@ -30,7 +30,7 @@ class FileService:
         # Проверка на тип сообщения и тип файла
         real_file_type = determining_file_type(upload_file.content_type)
         if real_file_type != upload_data.file_type:
-            raise NotCorrectMessageTypeForFileType(upload_data.file_type, upload_file.content_type)
+            raise NotCorrectMessageTypeForFileTypeError(upload_data.file_type, upload_file.content_type)
 
         # Сохраняем файл
         save_file_url = await file_manager.save_file(

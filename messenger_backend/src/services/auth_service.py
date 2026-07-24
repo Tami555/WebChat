@@ -5,7 +5,7 @@ from jwt.exceptions import InvalidTokenError as JWTTokenInvalidError
 from src.crud import UserCRUD
 from src.models import Users
 from src.core.security import create_access_token, create_refresh_token, check_access_token, check_refresh_token
-from src.exceptions import auth as auth_exc, users as users_exc
+from src.exceptions.errors import auth as auth_exc, users as users_exc
 from src.schemas.enums import TokenType
 from src.schemas import TokenResponse, RegistrationUser, LoginUser, PhoneVerificationRequest
 from src.services.verification_service import VerificationService

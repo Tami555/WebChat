@@ -1,6 +1,6 @@
 from fastapi import status
 
-from .base import BaseAppException
+from ..base import BaseAppException
 
 
 class InvalidTokenError(BaseAppException):
