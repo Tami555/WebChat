@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from src.models import Groups, GroupMembers, Messages
-from src.schemas.enums import RolesMemberGroups
+from src.schemas.enums import GroupMemberRole
 
 
 class GroupCRUD:
@@ -29,7 +29,7 @@ class GroupCRUD:
             session.add(new_group)
             for member_id in members_list:
                 new_group.group_members.append(GroupMembers(user_id=member_id))
-            new_group.group_members.append(GroupMembers(user_id=creator_id, role=RolesMemberGroups.ADMIN))
+            new_group.group_members.append(GroupMembers(user_id=creator_id, role=GroupMemberRole.ADMIN))
             await session.commit()
             return new_group
 

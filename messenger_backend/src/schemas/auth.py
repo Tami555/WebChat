@@ -9,18 +9,19 @@ if TYPE_CHECKING:
     from src.models import Users  
 
 
-# === РЕГИСТРАЦИЯ ===
-class RegistrationUser(BaseModel):
+class RegistrationUserRequest(BaseModel):
+    """ Схема регистрации (создание) пользователя """
     username: str
     phone: Annotated[Union[str, PhoneNumber], PhoneNumberValidator(default_region='RU')]
 
 
-class LoginUser(BaseModel):
+class LoginUserRequest(BaseModel):
+    """ Схема входа (авторизации) пользователя """
     phone: Annotated[Union[str, PhoneNumber], PhoneNumberValidator(default_region='RU')]
 
 
-# === ВЕРИФИКАЦИЯ ===
 class PhoneVerificationRequest(BaseModel):
+    """ Схема подтверждения телефона пользователя """
     phone: Annotated[Union[str, PhoneNumber], PhoneNumberValidator(default_region='RU')]
     code: str
     
@@ -33,26 +34,30 @@ class PhoneVerificationRequest(BaseModel):
     
 
 class VerificationCodeResponse(BaseModel):
+    """ Схема успешно отправленного кода проверки телефона  """
     message: str = "Verification code sent"
     expires_in: int = settings.verification.code_ttl // 60
  
 
-# === ТОКЕНЫ ===
 class TokenRequest(BaseModel):
+    """ Схема отправки токена  """
     token: str
 
 
 class TokenResponse(BaseModel):
+    """ Схема получения токенов """
     access_token: str
     refresh_token: str | None = None
     token_type: str = "Bearer"
 
 
 class TokenVerifyResponse(BaseModel):
+    """ Схема проверки валидности токена """
     is_verify_token: bool
 
 
 class RefreshTokenContent(BaseModel):
+    """ Схема refresh токена """
     sub: str
 
     @classmethod
@@ -63,6 +68,7 @@ class RefreshTokenContent(BaseModel):
 
 
 class AccessTokenContent(RefreshTokenContent):
+    """ Схема access токена """
     phone: str
 
     @classmethod

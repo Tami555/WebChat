@@ -4,14 +4,14 @@ from pathlib import Path
 from fastapi import UploadFile
 import aiofiles
 
-from src.schemas import SaveMessageFile
+from src.schemas import SaveMessageFileRequest
 
 
 class FileManager(ABC):
     @staticmethod
     @abstractmethod
     async def save_file(
-        data: SaveMessageFile,
+        data: SaveMessageFileRequest,
         file: UploadFile,
     ) -> str:
         raise NotImplementedError()
@@ -21,7 +21,7 @@ class LocalFileManager(FileManager):
     """Работа с файлами происходит на локальном диске"""
     @staticmethod
     async def save_file(
-        data: SaveMessageFile,
+        data: SaveMessageFileRequest,
         file: UploadFile,
     ) -> str:
         USER_FILE_KEY = uuid5(uuid5(uuid4(), file.filename), data.username)

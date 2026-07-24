@@ -59,4 +59,3 @@ def exception_handler(app: FastAPI):
                 "message": "Вы не авторизованы! Войдите пожалуйста в аккаунт"
             }
         )
-    

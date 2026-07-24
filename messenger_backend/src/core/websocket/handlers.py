@@ -4,8 +4,8 @@ from fastapi import WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.users import Users
-from src.schemas import MessageCreate
-from src.schemas.enums import ChatTypes
+from src.schemas import MessageCreateRequest
+from src.schemas.enums import ChatType
 from src.core.websocket.manager import websocket_manager
 from src.core.websocket.service import WebsocketService
 
@@ -16,7 +16,7 @@ class WebSocketHandlers:
     async def handle_join_chat(user: Users, data: dict, **kwargs):
         """Обработчик входа в чат"""
         chat_id = UUID(data["chat_id"])
-        chat_type = ChatTypes(data["chat_type"])
+        chat_type = ChatType(data["chat_type"])
 
         websocket_manager.set_user_chat(
             user.username,
@@ -37,7 +37,7 @@ class WebSocketHandlers:
     ):
         """Обработчик статуса печатания"""
         chat_id = UUID(data["chat_id"])
-        chat_type = ChatTypes(data["chat_type"])
+        chat_type = ChatType(data["chat_type"])
         is_typing = data.get("is_typing", True)
 
         await WebsocketService.broadcast_typing_status(
@@ -56,7 +56,7 @@ class WebSocketHandlers:
         data: dict
     ):
         """Обработчик создания сообщения"""
-        message_data = MessageCreate(**data)
+        message_data = MessageCreateRequest(**data)
         message_data.created_at = datetime.datetime.now()
 
         result = await WebsocketService.process_message(

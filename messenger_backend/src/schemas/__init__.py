@@ -4,23 +4,23 @@ __all__ = (
     "RefreshTokenContent",
     "TokenRequest",
     "TokenVerifyResponse",
-    "RegistrationUser",
-    "LoginUser",
+    "RegistrationUserRequest",
+    "LoginUserRequest",
     "PhoneVerificationRequest",
     "VerificationCodeResponse",
     "UserResponse",
     "ShortUserResponse",
     "ShortMessageResponse",
     "MessageResponse",
-    "MessageCreate",
-    "SaveMessageFile",
-    "UploadMessageFile",
-    "Chat",
-    "AllChats",
-    "CreateGroup",
+    "MessageCreateRequest",
+    "SaveMessageFileRequest",
+    "UploadMessageFileRequest",
+    "ChatResponse",
+    "AllChatsResponse",
+    "CreateGroupRequest",
     "GroupResponse",
-    "CreateGroupWithMembers",
-    "CreateDialog",
+    "CreateGroupWithMembersRequest",
+    "CreateDialogRequest",
     "DialogDetailResponse",
     "ShortStickerResponse",
     "StickerResponse"
@@ -29,12 +29,12 @@ __all__ = (
 
 from .auth import (
     TokenResponse, AccessTokenContent, RefreshTokenContent, TokenRequest, TokenVerifyResponse,
-    RegistrationUser, LoginUser,
+    RegistrationUserRequest, LoginUserRequest,
     PhoneVerificationRequest, VerificationCodeResponse
 )
 from .users import UserResponse, ShortUserResponse
-from .messages import ShortMessageResponse, MessageResponse, MessageCreate, SaveMessageFile, UploadMessageFile
-from .chats import Chat, AllChats
-from .groups import CreateGroup, GroupResponse, CreateGroupWithMembers
-from .dialogs import CreateDialog, DialogDetailResponse
+from .messages import ShortMessageResponse, MessageResponse, MessageCreateRequest, SaveMessageFileRequest, UploadMessageFileRequest
+from .chats import ChatResponse, AllChatsResponse
+from .groups import CreateGroupRequest, GroupResponse, CreateGroupWithMembersRequest
+from .dialogs import CreateDialogRequest, DialogDetailResponse
 from .sticker import ShortStickerResponse, StickerResponse

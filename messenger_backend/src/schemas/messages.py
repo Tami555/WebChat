@@ -3,14 +3,15 @@ from uuid import UUID
 from pydantic import BaseModel
 from fastapi import Form
 
-from .enums import MessageTypes, ChatTypes
+from .enums import MessageType, ChatType
 from .users import ShortUserResponse
 from .sticker import ShortStickerResponse, StickerResponse
 
 
 class ShortMessageResponse(BaseModel):
+    """ Схема сообщения (не полная) """
     sender: ShortUserResponse
-    type: MessageTypes = MessageTypes.TEXT
+    type: MessageType = MessageType.TEXT
     created_at: datetime.datetime
     content: str | None = None
     sticker: ShortStickerResponse | None = None
@@ -20,6 +21,7 @@ class ShortMessageResponse(BaseModel):
 
 
 class MessageResponse(ShortMessageResponse):
+    """ Схема сообщения """
     id: UUID
     file_url: str | None = None
     sticker: StickerResponse | None = None
@@ -30,10 +32,11 @@ class MessageResponse(ShortMessageResponse):
         from_attributes = True
 
 
-class MessageCreate(BaseModel):
+class MessageCreateRequest(BaseModel):
+    """ Схема создания сообщения """
     chat_id: UUID
-    chat_type: ChatTypes
-    message_type: MessageTypes
+    chat_type: ChatType
+    message_type: MessageType
     content: str | None = None
     sticker_id: UUID | None = None
     reply_message_id: UUID | None = None
@@ -43,15 +46,15 @@ class MessageCreate(BaseModel):
     @staticmethod
     def create_message_by_form(
         chat_id: UUID = Form(...),
-        chat_type: ChatTypes = Form(...),
-        message_type: MessageTypes = Form(...),
+        chat_type: ChatType = Form(...),
+        message_type: MessageType = Form(...),
         content: str | None = Form(default=None),
         sticker_id: UUID | None = Form(default=None),
         reply_message_id: UUID | None = Form(default=None),
         file_url: str | None = Form(default=None),
         created_at: datetime.datetime = Form(...),
-    ) -> "MessageCreate":
-        return MessageCreate(
+    ) -> "MessageCreateRequest":
+        return MessageCreateRequest(
             chat_id=chat_id,
             chat_type=chat_type,
             message_type=message_type,
@@ -63,25 +66,27 @@ class MessageCreate(BaseModel):
         )
 
 
-class UploadMessageFile(BaseModel):
+class UploadMessageFileRequest(BaseModel):
+    """ Схема отправки файла в чат """
     chat_id: UUID
-    chat_type: ChatTypes
-    file_type: MessageTypes
+    chat_type: ChatType
+    file_type: MessageType
 
     @staticmethod
     def upload_message_file_by_form(
         chat_id: UUID = Form(...),
-        chat_type: ChatTypes = Form(...),
-        file_type: MessageTypes = Form(...)
-    ) -> "UploadMessageFile":
-        return UploadMessageFile(
+        chat_type: ChatType = Form(...),
+        file_type: MessageType = Form(...)
+    ) -> "UploadMessageFileRequest":
+        return UploadMessageFileRequest(
             chat_id=chat_id,
             chat_type=chat_type,
             file_type=file_type
         )
 
 
-class SaveMessageFile(BaseModel):
+class SaveMessageFileRequest(BaseModel):
+    """ Схема сохранения файла """
     chat_id: UUID
-    file_type: MessageTypes
+    file_type: MessageType
     username: str

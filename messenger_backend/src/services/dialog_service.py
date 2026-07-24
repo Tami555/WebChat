@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Dialogs, Messages
 from src.crud import DialogCRUD, MessageCRUD
-from src.schemas import Chat, CreateDialog
+from src.schemas import ChatResponse, CreateDialogRequest
 from src.exceptions import DialogAlreadyExistsError, DialogWithOneUserError, DialogNotFoundError, UserIsNotDialogInterlocutorError
 from .user_service import UserService
 
@@ -39,14 +39,14 @@ class DialogService:
         return {dialog.user1.username, dialog.user2.username}
 
     @staticmethod
-    async def get_dialogs_by_user(user: Users, session: AsyncSession) -> list[Chat]:
+    async def get_dialogs_by_user(user: Users, session: AsyncSession) -> list[ChatResponse]:
         """Получение всех чатов-диалогов, в которых состоит пользователь"""
         dialogs = await DialogCRUD.dialogs_by_user(user_id=user.id, session=session)
         chats = []
         for dialog in dialogs:
             unread_count = await MessageCRUD.unread_count_message_by_chat(dialog_id=dialog.id, user_id=user.id, session=session)
             interlocutor = dialog.user2 if dialog.user1_id == user.id else dialog.user1 # TODO: кастомное имя
-            chat = Chat(
+            chat = ChatResponse(
                 id=dialog.id,
                 title=interlocutor.first_name or interlocutor.username,
                 avatar_url=interlocutor.avatar_url,
@@ -57,7 +57,7 @@ class DialogService:
         return chats
     
     @staticmethod
-    async def create_dialog(creator: Users, dialog_data: CreateDialog, session: AsyncSession) -> Dialogs:
+    async def create_dialog(creator: Users, dialog_data: CreateDialogRequest, session: AsyncSession) -> Dialogs:
         """Создание диалога"""
         # проверка что собеседник не равен автору
         if creator.id == dialog_data.interlocutor:

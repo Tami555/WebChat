@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Groups, Messages
 from src.crud import GroupCRUD, UserCRUD, MessageCRUD
-from src.schemas import Chat, CreateGroupWithMembers
+from src.schemas import ChatResponse, CreateGroupWithMembersRequest
 from src.exceptions import CreatorIsNotMemberError, RecurringMembersError, UserNotFoundError, GroupNotFoundError, UserIsNotGroupMemberError
 
 
@@ -32,13 +32,13 @@ class GroupService:
         return True
     
     @staticmethod
-    async def get_groups_by_user(user: Users, session: AsyncSession) -> list[Chat]:
+    async def get_groups_by_user(user: Users, session: AsyncSession) -> list[ChatResponse]:
         """Получение всех групп, в которых состоит пользователь"""
         groups = await GroupCRUD.groups_by_user(user_id=user.id, session=session)
         chats = []
         for group in groups:
             unread_count = await MessageCRUD.unread_count_message_by_chat(group_id=group.id, user_id=user.id, session=session)
-            chat = Chat(
+            chat = ChatResponse(
                 id=group.id,
                 title=group.title,
                 avatar_url=group.avatar_url,
@@ -57,7 +57,7 @@ class GroupService:
         return {member.member.username for member in group.group_members}
     
     @staticmethod
-    async def create_group(creator: Users, create_group_data: CreateGroupWithMembers, session: AsyncSession) -> Groups:
+    async def create_group(creator: Users, create_group_data: CreateGroupWithMembersRequest, session: AsyncSession) -> Groups:
         """Создание группы с участниками"""
         group_data = create_group_data.group.model_dump()
         group_data["created_by"] = creator.id

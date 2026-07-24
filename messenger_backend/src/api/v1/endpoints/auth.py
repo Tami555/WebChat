@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.schemas import (
-    RegistrationUser, TokenResponse, LoginUser,
+    RegistrationUserRequest, TokenResponse, LoginUserRequest,
     TokenRequest, TokenVerifyResponse, PhoneVerificationRequest,
     VerificationCodeResponse
 )
@@ -15,7 +15,7 @@ router = APIRouter()
 
 @router.post("/register")
 async def register_request(
-    user_data: RegistrationUser,
+    user_data: RegistrationUserRequest,
     session: AsyncSession = Depends(database_helper.create_scoped_session)
 ) -> VerificationCodeResponse:
     """Запрос на регистрацию: Отправляет код верификации на телефон"""
@@ -34,7 +34,7 @@ async def complete_registration(
 
 @router.post("/login")
 async def login_request(
-    user_data: LoginUser,
+    user_data: LoginUserRequest,
     session: AsyncSession = Depends(database_helper.create_scoped_session)
 ) -> VerificationCodeResponse:
     """Запрос на вход: Отправляет код верификации на телефон

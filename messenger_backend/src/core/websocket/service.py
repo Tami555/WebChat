@@ -2,8 +2,8 @@ import datetime
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.schemas import MessageCreate, MessageResponse
-from src.schemas.enums import ChatTypes
+from src.schemas import MessageCreateRequest, MessageResponse
+from src.schemas.enums import ChatType
 from src.services import MessageService, UserService, NotificationService
 from src.models import Users
 from src.core.redis import online_redis
@@ -16,7 +16,7 @@ class WebsocketService:
     @staticmethod
     async def process_message(
         sender_user: Users,
-        message_data: MessageCreate,
+        message_data: MessageCreateRequest,
         session: AsyncSession
     ) -> dict | str:
         """ Основной метод обработки входящего сообщения """
@@ -83,7 +83,7 @@ class WebsocketService:
     async def broadcast_typing_status(
         sender_username: str,
         chat_id: UUID,
-        chat_type: ChatTypes,
+        chat_type: ChatType,
         is_typing: bool,
         session: AsyncSession
     ):

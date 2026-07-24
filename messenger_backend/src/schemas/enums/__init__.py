@@ -1,7 +1,7 @@
-__all__ = ("TokenType", "RolesMemberGroups", "MessageTypes", "ChatTypes")
+__all__ = ("TokenType", "GroupMemberRole", "MessageType", "ChatType")
 
 
 from .auth import TokenType
-from .group_members import RolesMemberGroups
-from .messages import MessageTypes
-from .chats import ChatTypes
+from .group_members import GroupMemberRole
+from .messages import MessageType
+from .chats import ChatType

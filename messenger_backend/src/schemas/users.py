@@ -4,6 +4,7 @@ from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
 class ShortUserResponse(BaseModel):
+    """ Схема пользователя (не полная) """
     username: str
     phone: PhoneNumber
     avatar_url: str | None = None
@@ -13,6 +14,7 @@ class ShortUserResponse(BaseModel):
 
 
 class UserResponse(ShortUserResponse):
+    """ Схема пользователя """
     first_name: str | None
     bio: str | None
     birthday: datetime.datetime | None

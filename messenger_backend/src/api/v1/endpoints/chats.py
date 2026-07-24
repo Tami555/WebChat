@@ -1,28 +1,28 @@
 from uuid import UUID
 from typing import Annotated
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends, Query, UploadFile, Form
+from fastapi import APIRouter, Depends, Query, UploadFile
 
 import src.api.v1.dependencies as dependencies
 from src.core.database import database_helper
 from src.models import Users
-from src.schemas import AllChats, MessageResponse, MessageCreate, UploadMessageFile
+from src.schemas import AllChatsResponse, MessageResponse, MessageCreateRequest, UploadMessageFileRequest
 from src.services import GroupService, DialogService, MessageService, FileService
-from src.schemas.enums import ChatTypes
+from src.schemas.enums import ChatType
 
 
 router = APIRouter()
 
 
-@router.get("/", response_model=AllChats)
+@router.get("/", response_model=AllChatsResponse)
 async def get_user_chats(
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session)
-) -> AllChats:
+) -> AllChatsResponse:
     """ Получить все чаты пользователя (группы и диалоги)"""
     groups = await GroupService.get_groups_by_user(user=user, session=session)
     dialogs = await DialogService.get_dialogs_by_user(user=user, session=session)
-    return AllChats(
+    return AllChatsResponse(
         dialogs=dialogs,
         groups=groups
     )
@@ -31,7 +31,7 @@ async def get_user_chats(
 @router.get("/{chat_id}/messages", response_model=list[MessageResponse])
 async def get_chat_messages(
     chat_id: UUID,
-    chat_type: Annotated[ChatTypes, Query],
+    chat_type: Annotated[ChatType, Query],
     page: Annotated[int, Query] = 1,
     limit: Annotated[int, Query] = 50,
     user: Users = Depends(dependencies.get_current_user),
@@ -50,7 +50,7 @@ async def get_chat_messages(
 
 @router.post("/messages/create")
 async def create_message(
-    message_data: MessageCreate = Depends(MessageCreate.create_message_by_form),
+    message_data: MessageCreateRequest = Depends(MessageCreateRequest.create_message_by_form),
     message_file: UploadFile | None = None,
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session)
@@ -58,7 +58,7 @@ async def create_message(
     """Создание сообщения (для разработки)"""
     if message_file is not None:
         save_file_url = await FileService.upload_message_file(
-            upload_data=UploadMessageFile(
+            upload_data=UploadMessageFileRequest(
                 chat_id=message_data.chat_id,
                 chat_type=message_data.chat_type,
                 file_type=message_data.message_type
@@ -79,7 +79,7 @@ async def create_message(
 @router.post("/messages/upload_file")
 async def upload_message_file(
         upload_file: UploadFile,
-        upload_data: UploadMessageFile = Depends(UploadMessageFile.upload_message_file_by_form),
+        upload_data: UploadMessageFileRequest = Depends(UploadMessageFileRequest.upload_message_file_by_form),
         user: Users = Depends(dependencies.get_current_user),
         session: AsyncSession = Depends(database_helper.create_scoped_session)
 ):

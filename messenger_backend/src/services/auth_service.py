@@ -7,7 +7,7 @@ from src.models import Users
 from src.core.security import create_access_token, create_refresh_token, check_access_token, check_refresh_token
 from src.exceptions.errors import auth as auth_exc, users as users_exc
 from src.schemas.enums import TokenType
-from src.schemas import TokenResponse, RegistrationUser, LoginUser, PhoneVerificationRequest
+from src.schemas import TokenResponse, RegistrationUserRequest, LoginUserRequest, PhoneVerificationRequest
 from src.services.verification_service import VerificationService
 
 
@@ -17,7 +17,7 @@ class AuthService:
     @staticmethod
     async def request_registration(
         session: AsyncSession,
-        user_data: RegistrationUser
+        user_data: RegistrationUserRequest
     ) -> str:
         """ Запрос на регистрацию - отправка кода """
         if await UserCRUD.get_user_by_phone(user_data.phone, session) is not None:
@@ -58,7 +58,7 @@ class AuthService:
     @staticmethod
     async def request_login(
         session: AsyncSession,
-        user_data: LoginUser
+        user_data: LoginUserRequest
     ) -> str:
         """Запрос на вход - отправка кода"""
         # Проверяем существование пользователя

@@ -3,7 +3,7 @@ from typing import TYPE_CHECKING
 from sqlalchemy import ForeignKey, func, UniqueConstraint, Enum as SQLEnum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
-from src.schemas.enums import RolesMemberGroups
+from src.schemas.enums import GroupMemberRole
 from src.models.base import Base
 
 
@@ -15,9 +15,9 @@ if TYPE_CHECKING:
 class GroupMembers(Base):
     group_id: Mapped[int] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"), primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), primary_key=True)
-    role: Mapped[RolesMemberGroups] = mapped_column(
-        SQLEnum(RolesMemberGroups, name="roles_member_groups"),
-        default=RolesMemberGroups.MEMBER
+    role: Mapped[GroupMemberRole] = mapped_column(
+        SQLEnum(GroupMemberRole, name="roles_member_groups"),
+        default=GroupMemberRole.MEMBER
     )
     joined_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now, server_default=func.now())
     

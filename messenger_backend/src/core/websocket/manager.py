@@ -4,13 +4,13 @@ from uuid import UUID
 from fastapi import WebSocket
 
 from src.core.redis import online_redis, pubsub_redis
-from src.schemas.enums import ChatTypes
+from src.schemas.enums import ChatType
 
 
 class WebsocketManager:
     def __init__(self):
         self.active_connections: dict[str, WebSocket] = {}
-        self.user_current_chat: dict[str, tuple[UUID, ChatTypes] | None] = {}
+        self.user_current_chat: dict[str, tuple[UUID, ChatType] | None] = {}
         self.server_id = None
         self.pubsub = None
         self._initialized = False
@@ -58,7 +58,7 @@ class WebsocketManager:
                 return True
             return False
 
-    def set_user_chat(self, username: str, chat_id: UUID, chat_type: ChatTypes):
+    def set_user_chat(self, username: str, chat_id: UUID, chat_type: ChatType):
         """Установить текущий чат пользователя"""
         if username in self.user_current_chat:
             self.user_current_chat[username] = (chat_id, chat_type)
@@ -72,7 +72,7 @@ class WebsocketManager:
             return True
         return False
 
-    def get_user_chat(self, username: str) -> tuple[UUID, ChatTypes] | None:
+    def get_user_chat(self, username: str) -> tuple[UUID, ChatType] | None:
         """Получить текущий чат пользователя"""
         return self.user_current_chat.get(username)
 

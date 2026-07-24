@@ -3,7 +3,8 @@ from pydantic import BaseModel
 from .messages import ShortMessageResponse
 
 
-class Chat(BaseModel):
+class ChatResponse(BaseModel):
+    """ Схема чата """
     id: UUID
     title: str
     avatar_url: str | None
@@ -11,6 +12,8 @@ class Chat(BaseModel):
     unread_count_message: int
 
 
-class AllChats(BaseModel):
-    dialogs: list[Chat]
-    groups: list[Chat]
+class AllChatsResponse(BaseModel):
+    """ Схема чатов всех типов """
+    dialogs: list[ChatResponse]
+    groups: list[ChatResponse]
+    

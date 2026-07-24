@@ -6,7 +6,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.models.base import Base
 from src.models.mixins import UUIDPrimaryKey
-from src.schemas.enums import MessageTypes
+from src.schemas.enums import MessageType
 
 
 if TYPE_CHECKING:
@@ -21,9 +21,9 @@ class Messages(UUIDPrimaryKey, Base):
     sender_id: Mapped[UUID] = mapped_column(ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
     dialog_id: Mapped[UUID] = mapped_column(ForeignKey("dialogs.id", ondelete="CASCADE"), index=True, nullable=True)
     group_id: Mapped[UUID] = mapped_column(ForeignKey("groups.id", ondelete="CASCADE"), index=True, nullable=True)
-    type: Mapped[MessageTypes] = mapped_column(
-        SQLEnum(MessageTypes, name="message_types"),
-        default=MessageTypes.TEXT
+    type: Mapped[MessageType] = mapped_column(
+        SQLEnum(MessageType, name="message_types"),
+        default=MessageType.TEXT
     )
     content: Mapped[str] = mapped_column(Text, nullable=True)
     file_url: Mapped[str] = mapped_column(nullable=True)
