@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import Iterable
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import src.crud.users as crud
+from src.crud import UserCRUD
 from src.exceptions import UserNotFoundError
 from src.models import Users
 
@@ -13,7 +13,7 @@ class UserService:
     @staticmethod
     async def get_user_by_id(user_id: UUID, session: AsyncSession) -> Users:
         """Получение пользователя по id"""
-        user = await crud.get_user_by_id(user_id, session)
+        user = await UserCRUD.get_user_by_id(user_id, session)
         if user is None:
             raise UserNotFoundError()
         return user
@@ -26,4 +26,4 @@ class UserService:
         """Получение ID пользователей по их именам"""
         if not usernames:
             return []
-        return await crud.get_user_ids_by_usernames(usernames, session)
+        return await UserCRUD.get_user_ids_by_usernames(usernames, session)

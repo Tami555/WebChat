@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.services import DialogService, GroupService, StickerService
-from src.crud import messages as msg_crud
+from src.crud import MessageCRUD
 from src.models import Messages, Users
 from src.schemas.enums import ChatTypes, MessageTypes
 from src.schemas import MessageCreate
@@ -38,7 +38,7 @@ class MessageService:
             chat_type=chat_type,
             session=session
         )
-        messages = await msg_crud.messages_by_dialog_or_group(
+        messages = await MessageCRUD.messages_by_dialog_or_group(
             group_id=chat_id if chat_type is ChatTypes.GROUP else None,
             dialog_id=chat_id if chat_type is ChatTypes.DIALOGS else None,
             page=page,
@@ -47,7 +47,7 @@ class MessageService:
         )
         if messages:
             # Отмечаем сообщения как прочитанные
-            await msg_crud.mark_messages_as_read_by_chat(
+            await MessageCRUD.mark_messages_as_read_by_chat(
                 user_id=user.id,
                 group_id=chat_id if chat_type is ChatTypes.GROUP else None,
                 dialog_id=chat_id if chat_type is ChatTypes.DIALOGS else None,
@@ -102,7 +102,7 @@ class MessageService:
             
         # Проверка существования сообщения ответа
         if (message_data.reply_message_id is not None and
-                await msg_crud.get_message_by_id(message_data.reply_message_id, session)):
+                await MessageCRUD.get_message_by_id(message_data.reply_message_id, session)):
             raise MessageNotFoundError()
         
         # Проверка существования стикера
@@ -125,7 +125,7 @@ class MessageService:
             reply_to_id=message_data.reply_message_id,
             created_at=message_data.created_at
         )
-        created_message = await msg_crud.create_message(new_message, session)
+        created_message = await MessageCRUD.create_message(new_message, session)
 
         # Обновляем last_message
         await MessageService.update_chat_last_message(
@@ -134,7 +134,7 @@ class MessageService:
             last_message=created_message,
             session=session
         )
-        return await msg_crud.get_message_by_id_with_relationships(created_message.id, session)
+        return await MessageCRUD.get_message_by_id_with_relationships(created_message.id, session)
 
     @staticmethod
     async def update_chat_last_message(
@@ -166,7 +166,7 @@ class MessageService:
         session: AsyncSession,
     ) -> None:
         """Создание статусов чтения сообщения для участников"""
-        return await msg_crud.create_message_statuses(
+        return await MessageCRUD.create_message_statuses(
             message=message,
             read_users_ids=read_users_ids,
             not_read_users_ids=not_read_users_ids,

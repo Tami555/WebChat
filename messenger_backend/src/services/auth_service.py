@@ -2,7 +2,7 @@ import datetime
 from sqlalchemy.ext.asyncio import AsyncSession
 from jwt.exceptions import InvalidTokenError as JWTTokenInvalidError
 
-import src.crud.users as crud
+from src.crud import UserCRUD
 from src.models import Users
 from src.core.security import create_access_token, create_refresh_token, check_access_token, check_refresh_token
 from src.exceptions import auth as auth_exc, users as users_exc
@@ -20,10 +20,10 @@ class AuthService:
         user_data: RegistrationUser
     ) -> str:
         """ Запрос на регистрацию - отправка кода """
-        if await crud.get_user_by_phone(user_data.phone, session) is not None:
+        if await UserCRUD.get_user_by_phone(user_data.phone, session) is not None:
             raise users_exc.PhoneAlreadyExistsError()
     
-        if await crud.get_user_by_username(user_data.username, session) is not None:
+        if await UserCRUD.get_user_by_username(user_data.username, session) is not None:
             raise users_exc.UsernameAlreadyExistsError()
         
         # Отправляем код
@@ -48,7 +48,7 @@ class AuthService:
         )
         # Создаем пользователя
         user_data["last_seen"] = datetime.datetime.now()
-        new_user = await crud.create_user(
+        new_user = await UserCRUD.create_user(
             user_data=user_data,
             session=session
         )
@@ -62,7 +62,7 @@ class AuthService:
     ) -> str:
         """Запрос на вход - отправка кода"""
         # Проверяем существование пользователя
-        user = await crud.get_user_by_phone(user_data.phone, session)
+        user = await UserCRUD.get_user_by_phone(user_data.phone, session)
         if not user:
             raise users_exc.UserNotFoundError()
                
@@ -87,7 +87,7 @@ class AuthService:
             code=verification_data.code
         )   
         # Получаем пользователя
-        user = await crud.get_user_by_username(username=user_data.get("username"), session=session)
+        user = await UserCRUD.get_user_by_username(username=user_data.get("username"), session=session)
         if not user:
             raise users_exc.UserNotFoundError()
         # Обновляем вход
@@ -119,7 +119,7 @@ class AuthService:
             if not payload:
                 raise auth_exc.TokenTypeMismatchError(expected=TokenType.ACCESS_TOKEN)
         
-            user = await crud.get_user_by_username(payload.get("sub"), session)
+            user = await UserCRUD.get_user_by_username(payload.get("sub"), session)
             if not user:
                 raise users_exc.UserNotFoundError()
         
@@ -138,7 +138,7 @@ class AuthService:
             if payload is None:
                 raise auth_exc.TokenTypeMismatchError(expected=TokenType.REFRESH_TOKEN)
           
-            user = await crud.get_user_by_username(payload.get("sub"), session)
+            user = await UserCRUD.get_user_by_username(payload.get("sub"), session)
             if user is None:
                 raise users_exc.UserNotFoundError()
         
