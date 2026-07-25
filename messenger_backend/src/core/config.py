@@ -6,6 +6,11 @@ from pydantic_settings import SettingsConfigDict, BaseSettings
 BASE_PATH = Path(__file__).parent.parent.parent.parent
 
 
+class BaseAppConfig(BaseModel):
+    """Базовая конфигурация всего приложения"""
+    environment: str = ""
+
+
 class VerificationConfig(BaseModel):
     """Конфигурация верификации номера телефона"""
     code_ttl: int = 300  # 5 минут
@@ -55,6 +60,7 @@ class RedisConfig(BaseSettings):
 
 
 class Settings(BaseSettings):
+    app: BaseAppConfig = BaseAppConfig()
     verification: VerificationConfig = VerificationConfig()
     db: DatabaseConfig = DatabaseConfig()
     auth: AuthenticationConfig = AuthenticationConfig()

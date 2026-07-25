@@ -1,28 +1,23 @@
 __all__ = (
     "AuthService", 
     "UserService", 
-    "VerificationService", 
-    "SMSService",
-    "MockSMSService",
+    "VerificationService",
     "GroupService",
     "DialogService",
     "MessageService",
     "StickerService",
-    "FileService",
-    "NotificationService"
+    "FileService"
 )
 
 
 from .auth_service import AuthService
 from .user_service import UserService
 from .verification_service import VerificationService
-from .sms_service import SMSService, MockSMSService
 from .group_service import GroupService
 from .dialog_service import DialogService
 from .sticker_service import StickerService
 from .message_service import MessageService
 from .file_service import FileService
-from .notification_service import NotificationService
 
 
 # contact_service: получение, создание, редактирование, удаление и т.д кастомных имен, Поиск по именам 

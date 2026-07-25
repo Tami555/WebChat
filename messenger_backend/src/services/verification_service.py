@@ -2,19 +2,18 @@ import json
 
 from src.core.redis import verification_redis
 from src.core.config import settings
-from src.utils.code_generator import VerificationCodeGenerator
+from src.utils.verifications import VerificationCodeGenerator
 from src.exceptions import (
     VerificationCodeExpiredError,
     InvalidVerificationCodeError,
     TooManyAttemptsError
 )
-from src.services.sms_service import SMSService, MockSMSService
+from src.utils.notifications import get_sms_manager
 
 
 class VerificationService:
     """Сервис для работы с верификацией телефона"""
     MAX_ATTEMPTS = settings.verification.max_attempts
-    SMS_SERVICE: SMSService = MockSMSService()
 
     @staticmethod
     async def create_verification(phone: str, data: dict) -> str:
@@ -22,7 +21,8 @@ class VerificationService:
         # Генерируем код
         code = VerificationCodeGenerator.generate_from_phone(phone)
         # Отправляем SMS
-        await VerificationService.SMS_SERVICE.send_code(phone, code)
+        sms_manager = get_sms_manager()
+        await sms_manager.send_code(phone, code)
         # Сохраняем в Redis
         await verification_redis.save(phone, code, data)
         return code

@@ -3,20 +3,19 @@ from fastapi import UploadFile
 
 from src.schemas import UploadMessageFileRequest, SaveMessageFileRequest
 from src.models import Users
-from src.utils.files import determining_file_type, FileManager, LocalFileManager
+from src.utils.files import determining_file_type, get_file_manager
 from src.exceptions import NotCorrectMessageTypeForFileTypeError
 from src.services import MessageService
 
 
 class FileService:
-    """Сервис групповых чатов"""
+    """Сервис для работы с файлами"""
     @staticmethod
     async def upload_message_file(
         upload_data: UploadMessageFileRequest,
         upload_file: UploadFile,
         user: Users,
-        session: AsyncSession,
-        file_manager: FileManager = LocalFileManager
+        session: AsyncSession
     ):
         """Проверка корректности и загрузка файла сообщения"""
         # Проверка, что отправитель является участником чата
@@ -33,6 +32,7 @@ class FileService:
             raise NotCorrectMessageTypeForFileTypeError(upload_data.file_type, upload_file.content_type)
 
         # Сохраняем файл
+        file_manager = get_file_manager()
         save_file_url = await file_manager.save_file(
             data=SaveMessageFileRequest(
                 chat_id=upload_data.chat_id,

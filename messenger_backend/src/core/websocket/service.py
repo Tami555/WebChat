@@ -4,10 +4,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.schemas import MessageCreateRequest, MessageResponse
 from src.schemas.enums import ChatType
-from src.services import MessageService, UserService, NotificationService
+from src.services import MessageService, UserService
 from src.models import Users
 from src.core.redis import online_redis
 from src.core.websocket.manager import websocket_manager
+from src.utils.notifications import get_notification_manager
 
 
 class WebsocketService:
@@ -72,7 +73,8 @@ class WebsocketService:
         # Отправляем push-уведомления офлайн-пользователям
         notification_to = (offline_users | (online_users - delivered_to)) - {sender_user.username}
         if notification_to:
-            await NotificationService.send_push_notifications(
+            notification_manager = get_notification_manager()
+            await notification_manager.send_bulk_notification(
                 usernames=list(notification_to),
                 message=message_response
             )

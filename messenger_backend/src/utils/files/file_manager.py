@@ -4,6 +4,7 @@ from pathlib import Path
 from fastapi import UploadFile
 import aiofiles
 
+from src.core.config import settings
 from src.schemas import SaveMessageFileRequest
 
 
@@ -38,5 +39,13 @@ class LocalFileManager(FileManager):
 
 class S3FileManager(FileManager):
     """Работа с файлами в S3 хранилище """
+    # TODO: Реальная загрузка через S3
     async def save_file(*args, **kwargs) -> str:
         return ""
+
+
+def get_file_manager() -> type[FileManager]:
+    """Фабрика для получения менеджера файлов"""
+    if settings.app.environment == "production":
+        return S3FileManager
+    return LocalFileManager
