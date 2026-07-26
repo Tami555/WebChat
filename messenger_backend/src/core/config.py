@@ -1,3 +1,4 @@
+import logging
 from pydantic import BaseModel
 from pathlib import Path
 from pydantic_settings import SettingsConfigDict, BaseSettings
@@ -9,6 +10,16 @@ BASE_PATH = Path(__file__).parent.parent.parent.parent
 class BaseAppConfig(BaseModel):
     """Базовая конфигурация всего приложения"""
     environment: str = ""
+
+
+class LoggingConfig(BaseModel):
+    """Конфигурация логирования"""
+    level: str = "INFO"
+    format: str = "[%(asctime)s] - %(levelname)s - %(module) -> %(message)s"
+    datefmt: str = "%Y-%m-%d %H:%M:%S"
+
+    def get_level(self) -> int:
+        return getattr(logging, self.level.upper(), logging.INFO)
 
 
 class VerificationConfig(BaseModel):
@@ -61,6 +72,7 @@ class RedisConfig(BaseSettings):
 
 class Settings(BaseSettings):
     app: BaseAppConfig = BaseAppConfig()
+    logging: LoggingConfig = LoggingConfig()
     verification: VerificationConfig = VerificationConfig()
     db: DatabaseConfig = DatabaseConfig()
     auth: AuthenticationConfig = AuthenticationConfig()

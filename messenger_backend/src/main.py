@@ -1,5 +1,6 @@
-from contextlib import asynccontextmanager
+import logging
 import uvicorn
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,18 +9,23 @@ from src.core.redis import online_redis, redis_manager
 from src.exceptions import exception_handler
 from src.api.v1 import router as api_v1_router
 from src.core.websocket import websocket_manager
+from src.utils.logging.config import setup_logging
+
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    print("START BACKEND")
-    print(f"APP ID : {id(app)}")
+    setup_logging()
+    logger.debug("START BACKEND")
+    logger.info(f"APP ID : {id(app)}")
     await redis_manager.connect()
     await websocket_manager.initialize(server_id=f"server-{id(app)}")
-    print(f"Кто онлайн: {await online_redis.get_all_online()}")
+    logger.info(f"Кто онлайн: {await online_redis.get_all_online()}")
     yield
     await redis_manager.disconnect()
-    print("STOP BACKEND")
+    logger.debug("STOP BACKEND")
 
 
 app = FastAPI(lifespan=lifespan)

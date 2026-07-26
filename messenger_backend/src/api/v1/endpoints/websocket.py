@@ -1,3 +1,4 @@
+import logging
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import WebSocket, APIRouter, Depends, WebSocketDisconnect, WebSocketException
 
@@ -6,6 +7,8 @@ from src.api.v1.dependencies import get_current_user_ws
 from src.core.database import database_helper
 from src.core.websocket import websocket_manager, WebSocketDispatcher
 
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 dispatcher = WebSocketDispatcher()
@@ -31,13 +34,13 @@ async def create_connection(
             except (WebSocketDisconnect, WebSocketException):
                 break
             except Exception as e:
-                # TODO: заменить на логирование
-                print(f"Error: {e}")
+                logger.exception(f"WebSocket Error:", exc_info=e)
                 await ws.send_json({
                     "status": "error",
                     "error": str(e)
                 })
-    except (WebSocketDisconnect, WebSocketException):
-        print(f"User {sender_username} disconnected")
+    except (WebSocketDisconnect, WebSocketException) as e:
+        logger.exception(f"WebSocket Error:", exc_info=e)
+        logger.info(f"User {sender_username} disconnected")
     finally:
         await websocket_manager.disconnect(sender_username)
