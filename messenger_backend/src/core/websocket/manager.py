@@ -1,10 +1,15 @@
+import logging
 import asyncio
 import json
+import redis
 from uuid import UUID
 from fastapi import WebSocket
 
 from src.core.redis import online_redis, pubsub_redis
 from src.schemas.enums import ChatType
+
+
+logger = logging.getLogger(__name__)
 
 
 class WebsocketManager:
@@ -14,6 +19,8 @@ class WebsocketManager:
         self.server_id = None
         self.pubsub = None
         self._initialized = False
+        self._listen_task = None
+        self._running = False
     
     async def initialize(self, server_id: str = "server-1"):
         """Инициализация сервера, где доступны WebSocket соединения"""
@@ -21,7 +28,8 @@ class WebsocketManager:
             return
         self.server_id = server_id
         self.pubsub = pubsub_redis.get_pubsub()
-        asyncio.create_task(self._listen_to_pubsub())
+        self._running = True
+        self._listen_task = asyncio.create_task(self._listen_to_pubsub())
         self._initialized = True
 
     async def connect(self, username: str, websocket: WebSocket):
@@ -77,16 +85,71 @@ class WebsocketManager:
         return self.user_current_chat.get(username)
 
     async def _listen_to_pubsub(self):
+        """Слушает сообщения из Redis PubSub"""
         pubsub_server_key = pubsub_redis.get_channel(server_id=self.server_id)
-        await self.pubsub.subscribe(pubsub_server_key)
 
-        async for message in self.pubsub.listen():
-            if message.get("type", "") == "subscribe":
+        while self._running:
+            try:
+                await self.pubsub.subscribe(pubsub_server_key)
+                logger.info(f"Подписка на канал {pubsub_server_key} установлена")
+
+                # Слушаем сообщения
+                async for message in self.pubsub.listen():
+                    if not self._running:
+                        break
+                    if message.get("type", "") == "subscribe":
+                        continue
+                    try:
+                        data = json.loads(message["data"])
+                        username = data.get("to_username")
+                        message_data = data.get("data")
+
+                        if username and username in self.active_connections:
+                            await self.active_connections[username].send_json(message_data)
+                    except Exception as e:
+                        logger.error(f"Ошибка обработки сообщения: {e}")
+
+            except asyncio.CancelledError:
+                logger.info("Задача _listen_to_pubsub отменена")
+                break
+
+            except redis.exceptions.TimeoutError:
+                logger.debug("Ожидание сообщений PubSub (таймаут)")
                 continue
-            # Отправляем локальному пользователю
-            data = json.loads(message["data"])
-            if (username := data["to_username"]) in self.active_connections:
-                await self.active_connections[username].send_json(data["data"])
+
+            except Exception as e:
+                logger.error(f"PubSub Error: {e}")
+                await asyncio.sleep(1)  # задержка перед повтором
+
+        logger.info("Прослушивание PubSub остановлено")
+
+    async def shutdown(self):
+        """ Остановка работы WebSocket соединений """
+        self._running = False
+
+        if self.pubsub:
+            try:
+                await self.pubsub.unsubscribe()
+                await self.pubsub.close()
+            except Exception as e:
+                logger.error(f"Ошибка при закрытии PubSub: {e}")
+
+        if self._listen_task and not self._listen_task.done():
+            self._listen_task.cancel()
+            try:
+                await self._listen_task
+            except asyncio.CancelledError:
+                pass
+
+        # Закрываем все WebSocket соединения
+        for username, websocket in list(self.active_connections.items()):
+            try:
+                await websocket.close()
+            except Exception:
+                pass
+        self.active_connections.clear()
+        self.user_current_chat.clear()
+        logger.info("WebsocketManager завершил работу")
 
 
 websocket_manager = WebsocketManager()

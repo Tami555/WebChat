@@ -41,6 +41,6 @@ async def create_connection(
                 })
     except (WebSocketDisconnect, WebSocketException) as e:
         logger.exception(f"WebSocket Error:", exc_info=e)
-        logger.info(f"User {sender_username} disconnected")
+        logger.info(f"Пользователь {sender_username} отключен")
     finally:
         await websocket_manager.disconnect(sender_username)

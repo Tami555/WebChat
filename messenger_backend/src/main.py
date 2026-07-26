@@ -24,6 +24,7 @@ async def lifespan(app: FastAPI):
     await websocket_manager.initialize(server_id=f"server-{id(app)}")
     logger.info(f"Кто онлайн: {await online_redis.get_all_online()}")
     yield
+    await websocket_manager.shutdown()
     await redis_manager.disconnect()
     logger.debug("STOP BACKEND")
 

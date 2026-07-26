@@ -8,7 +8,16 @@ class RedisManager:
         self._client = None
 
     async def connect(self):
-        self._client = await aioredis.from_url(settings.redis.url, decode_responses=True)
+        self._client = await aioredis.from_url(
+            settings.redis.url,
+            decode_responses=True,
+            socket_connect_timeout=5,
+            socket_timeout=10,
+            socket_keepalive=True,
+            retry_on_timeout=True,
+            max_connections=50,
+            health_check_interval=25,
+        )
 
     async def disconnect(self):
         if self._client:
