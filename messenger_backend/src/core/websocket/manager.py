@@ -8,11 +8,12 @@ from fastapi import WebSocket
 from src.core.redis import online_redis, pubsub_redis
 from src.schemas.enums import ChatType
 
-
 logger = logging.getLogger(__name__)
 
 
 class WebsocketManager:
+    """Менеджер работы с Websockets"""
+
     def __init__(self):
         self.active_connections: dict[str, WebSocket] = {}
         self.user_current_chat: dict[str, tuple[UUID, ChatType] | None] = {}
@@ -21,7 +22,7 @@ class WebsocketManager:
         self._initialized = False
         self._listen_task = None
         self._running = False
-    
+
     async def initialize(self, server_id: str = "server-1"):
         """Инициализация сервера, где доступны WebSocket соединения"""
         if self._initialized:
@@ -49,19 +50,22 @@ class WebsocketManager:
         # Работа с Redis
         await online_redis.remove_user(username)
 
-    async def send_to_user(self, from_username: str, to_username: str, data: dict) -> bool:
+    async def send_to_user(self, to_username: str, data: dict) -> bool:
         """Отправляет сообщение через WebSocket если пользователь онлайн"""
         # Если пользователь на этом же сервере
         if to_username in self.active_connections:
             await self.active_connections[to_username].send_json(data)
             return True
-        else: 
+        else:
             # Выясняем на каком сервере получатель и отправляем туда
             server = await online_redis.get_user_server(username=to_username)
             if server:
                 await pubsub_redis.publish_to_server(
                     server_id=server,
-                    data={"to_username": to_username, "data": data}
+                    data={
+                        "to_username": to_username,
+                        "data": data,
+                    },
                 )
                 return True
             return False
@@ -105,7 +109,9 @@ class WebsocketManager:
                         message_data = data.get("data")
 
                         if username and username in self.active_connections:
-                            await self.active_connections[username].send_json(message_data)
+                            await self.active_connections[username].send_json(
+                                message_data
+                            )
                     except Exception as e:
                         logger.error(f"Ошибка обработки сообщения: {e}")
 
@@ -124,7 +130,7 @@ class WebsocketManager:
         logger.info("Прослушивание PubSub остановлено")
 
     async def shutdown(self):
-        """ Остановка работы WebSocket соединений """
+        """Остановка работы WebSocket соединений"""
         self._running = False
 
         if self.pubsub:

@@ -3,7 +3,8 @@ from pydantic import BaseModel
 
 
 class ShortStickerResponse(BaseModel):
-    """ Схема стикера (не полная) """
+    """Схема стикера (не полная)"""
+
     emoji: str
 
     class Config:
@@ -11,7 +12,8 @@ class ShortStickerResponse(BaseModel):
 
 
 class StickerResponse(ShortStickerResponse):
-    """ Схема стикера """
+    """Схема стикера"""
+
     id: UUID
     file_url: str
 

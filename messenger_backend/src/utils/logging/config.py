@@ -3,7 +3,6 @@ from pathlib import Path
 
 from src.core.config import settings
 
-
 LOGGING_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -34,7 +33,7 @@ LOGGING_CONFIG = {
         },
     },
     "loggers": {
-        "src": {  
+        "src": {
             "handlers": ["console"],
             "level": "DEBUG",
             "propagate": False,

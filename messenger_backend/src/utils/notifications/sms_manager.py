@@ -33,7 +33,7 @@ class MockSMSManager(SMSManager):
 
 
 class TwilioSMSManager(SMSManager):
-    """ SMS-менеджер Twilio"""
+    """SMS-менеджер Twilio"""
 
     @staticmethod
     async def send_code(phone: str, code: str) -> bool:

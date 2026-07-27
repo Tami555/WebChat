@@ -1,8 +1,4 @@
-__all__ = (
-    "determining_file_type",
-    "FileManager",
-    "get_file_manager"
-)
+__all__ = ("determining_file_type", "FileManager", "get_file_manager")
 
 
 from .file_types import determining_file_type

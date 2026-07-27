@@ -13,11 +13,14 @@ class VerificationRedisRepository(BaseRedisRepository):
     async def save(self, phone: str, code: str, data: dict) -> None:
         """Сохранить верификационный код"""
         key = self._key(self.NAMESPACE, phone)
-        await self.client.hset(key, mapping={
-            "code": code,
-            "data": json.dumps(data),
-            "attempts": 0
-        })
+        await self.client.hset(
+            key,
+            mapping={
+                "code": code,
+                "data": json.dumps(data),
+                "attempts": 0,
+            },
+        )
         await self.client.expire(key, self.CODE_TTL)
 
     async def get(self, phone: str) -> Optional[dict]:

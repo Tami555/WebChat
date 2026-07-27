@@ -4,6 +4,8 @@ from src.utils.strings import pascal_to_snake
 
 
 class Base(DeclarativeBase):
+    """Базовая БД модель"""
+
     __abstract__ = True
 
     @declared_attr

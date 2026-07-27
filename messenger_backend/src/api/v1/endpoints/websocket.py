@@ -1,12 +1,17 @@
 import logging
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import WebSocket, APIRouter, Depends, WebSocketDisconnect, WebSocketException
+from fastapi import (
+    WebSocket,
+    APIRouter,
+    Depends,
+    WebSocketDisconnect,
+    WebSocketException,
+)
 
 from src.models import Users
 from src.api.v1.dependencies import get_current_user_ws
 from src.core.database import database_helper
 from src.core.websocket import websocket_manager, WebSocketDispatcher
-
 
 logger = logging.getLogger(__name__)
 
@@ -14,11 +19,11 @@ router = APIRouter()
 dispatcher = WebSocketDispatcher()
 
 
-@router.websocket('/connect')
+@router.websocket("/connect")
 async def create_connection(
     ws: WebSocket,
     user: Users = Depends(get_current_user_ws),
-    session: AsyncSession = Depends(database_helper.create_scoped_session)
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """WebSocket соединение для чата"""
     sender_username = user.username
@@ -35,10 +40,7 @@ async def create_connection(
                 break
             except Exception as e:
                 logger.exception(f"WebSocket Error:", exc_info=e)
-                await ws.send_json({
-                    "status": "error",
-                    "error": str(e)
-                })
+                await ws.send_json({"status": "error", "error": str(e)})
     except (WebSocketDisconnect, WebSocketException) as e:
         logger.exception(f"WebSocket Error:", exc_info=e)
         logger.info(f"Пользователь {sender_username} отключен")

@@ -16,4 +16,3 @@ class StickerService:
         if sticker is None:
             raise StickerNotFoundError()
         return sticker
-    

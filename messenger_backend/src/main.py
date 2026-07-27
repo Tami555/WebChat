@@ -11,7 +11,6 @@ from src.api.v1 import router as api_v1_router
 from src.core.websocket import websocket_manager
 from src.utils.logging.config import setup_logging
 
-
 logger = logging.getLogger(__name__)
 
 

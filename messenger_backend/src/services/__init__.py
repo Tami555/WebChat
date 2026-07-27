@@ -1,12 +1,12 @@
 __all__ = (
-    "AuthService", 
-    "UserService", 
+    "AuthService",
+    "UserService",
     "VerificationService",
     "GroupService",
     "DialogService",
     "MessageService",
     "StickerService",
-    "FileService"
+    "FileService",
 )
 
 
@@ -19,8 +19,7 @@ from .sticker_service import StickerService
 from .message_service import MessageService
 from .file_service import FileService
 
-
-# contact_service: получение, создание, редактирование, удаление и т.д кастомных имен, Поиск по именам 
-# message_service: чтение сообщений (диалога, группы), создание разных типов, удаление (одно, всех), редактирование(своего, время)
+# contact_service: получение, создание, редактирование, удаление и т.д кастомных имен, Поиск по именам
+# message_service: удаление (одно, всех), редактирование(своего, время)
 # user_service: получение профиля, редактирование, поиск пользователей по username
 # sticker_service: создание, удаление стикеров и стикерпаков

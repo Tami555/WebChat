@@ -4,9 +4,9 @@ from ..base import BaseAppException
 
 
 class StickerNotFoundError(BaseAppException):
-    """ Стикер не найден """
+    """Стикер не найден"""
+
     def __init__(self):
         super().__init__(
-            message="Стикер не найден",
-            status_code=status.HTTP_404_NOT_FOUND
+            message="Стикер не найден", status_code=status.HTTP_404_NOT_FOUND
         )

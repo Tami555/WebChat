@@ -1,4 +1,9 @@
-__all__ = ("websocket_manager", "WebSocketHandlers", "WebsocketService", "WebSocketDispatcher")
+__all__ = (
+    "websocket_manager",
+    "WebSocketHandlers",
+    "WebsocketService",
+    "WebSocketDispatcher",
+)
 
 
 from .manager import websocket_manager

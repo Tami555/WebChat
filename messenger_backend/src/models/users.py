@@ -6,7 +6,6 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from .mixins import UUIDPrimaryKey
 from .base import Base
 
-
 if TYPE_CHECKING:
     from .dialogs import Dialogs
     from .groups import Groups
@@ -17,6 +16,8 @@ if TYPE_CHECKING:
 
 
 class Users(UUIDPrimaryKey, Base):
+    """БД модель Пользователя"""
+
     first_name: Mapped[str] = mapped_column(String(100), nullable=True)
     username: Mapped[str] = mapped_column(unique=True, nullable=False)
     phone: Mapped[str] = mapped_column(String(20), unique=True, nullable=False)
@@ -25,12 +26,28 @@ class Users(UUIDPrimaryKey, Base):
     avatar_url: Mapped[str] = mapped_column(nullable=True)
     last_seen: Mapped[datetime.datetime]
     is_online: Mapped[bool] = mapped_column(default=False)
-    created_at: Mapped[datetime.datetime] = mapped_column(default=datetime.datetime.now, server_default=func.now())
+    created_at: Mapped[datetime.datetime] = mapped_column(
+        default=datetime.datetime.now, server_default=func.now()
+    )
     # Отношения
-    dialogs_as_user1: Mapped[list["Dialogs"]] = relationship(foreign_keys="Dialogs.user1_id", back_populates="user1") # Чаты диалога
-    dialogs_as_user2: Mapped[list["Dialogs"]] = relationship(foreign_keys="Dialogs.user2_id", back_populates="user2")
-    create_groups: Mapped[list["Groups"]] = relationship(foreign_keys="Groups.created_by", back_populates="creater_user") # Созданные группы
-    member_groups: Mapped[list["GroupMembers"]] = relationship(foreign_keys="GroupMembers.user_id", back_populates="member") # Чаты групп
-    messages: Mapped[list["Messages"]] = relationship(foreign_keys="Messages.sender_id", back_populates="sender") # Сообщения (отправитель)
-    message_statuses: Mapped[list["MessageStatuses"]] = relationship(foreign_keys="MessageStatuses.user_id", back_populates="recipient") # Статусы сообщений (получатель)
-    contacts: Mapped[list["UserContacts"]] = relationship(foreign_keys="UserContacts.user_id", back_populates="user") # записанные контакты
+    dialogs_as_user1: Mapped[list["Dialogs"]] = relationship(
+        foreign_keys="Dialogs.user1_id", back_populates="user1"
+    )  # Чаты диалога
+    dialogs_as_user2: Mapped[list["Dialogs"]] = relationship(
+        foreign_keys="Dialogs.user2_id", back_populates="user2"
+    )
+    create_groups: Mapped[list["Groups"]] = relationship(
+        foreign_keys="Groups.created_by", back_populates="creater_user"
+    )  # Созданные группы
+    member_groups: Mapped[list["GroupMembers"]] = relationship(
+        foreign_keys="GroupMembers.user_id", back_populates="member"
+    )  # Чаты групп
+    messages: Mapped[list["Messages"]] = relationship(
+        foreign_keys="Messages.sender_id", back_populates="sender"
+    )  # Сообщения (отправитель)
+    message_statuses: Mapped[list["MessageStatuses"]] = relationship(
+        foreign_keys="MessageStatuses.user_id", back_populates="recipient"
+    )  # Статусы сообщений (получатель)
+    contacts: Mapped[list["UserContacts"]] = relationship(
+        foreign_keys="UserContacts.user_id", back_populates="user"
+    )  # записанные контакты

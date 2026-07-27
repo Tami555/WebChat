@@ -3,17 +3,18 @@ from pydantic import BaseModel
 from pathlib import Path
 from pydantic_settings import SettingsConfigDict, BaseSettings
 
-
 BASE_PATH = Path(__file__).parent.parent.parent.parent
 
 
 class BaseAppConfig(BaseModel):
     """Базовая конфигурация всего приложения"""
+
     environment: str = ""
 
 
 class LoggingConfig(BaseModel):
     """Конфигурация логирования"""
+
     level: str = "INFO"
     format: str = "[%(asctime)s] - %(levelname)s - %(module) -> %(message)s"
     datefmt: str = "%Y-%m-%d %H:%M:%S"
@@ -24,12 +25,14 @@ class LoggingConfig(BaseModel):
 
 class VerificationConfig(BaseModel):
     """Конфигурация верификации номера телефона"""
+
     code_ttl: int = 300  # 5 минут
     max_attempts: int = 3
 
 
 class DatabaseConfig(BaseModel):
     """Конфигурация Базы данных"""
+
     user: str = ""
     password: str = ""
     name: str = ""
@@ -43,6 +46,7 @@ class DatabaseConfig(BaseModel):
 
 class AuthenticationConfig(BaseModel):
     """Конфигурация Авторизации/Аутентификации"""
+
     app_secret_key: str = ""
     jwt_algorithm: str = "HS256"
     expire_access_token_minutes: int = 60  # 1 час
@@ -51,6 +55,7 @@ class AuthenticationConfig(BaseModel):
 
 class RedisNamespaces(BaseSettings):
     """Названия ключей Redis"""
+
     phone_verification: str = "phone:verification"
     users_online: str = "online:users"
     ws_server_user: str = "ws:server"
@@ -59,6 +64,7 @@ class RedisNamespaces(BaseSettings):
 
 class RedisConfig(BaseSettings):
     """Конфигурация Redis"""
+
     host: str = "localhost"
     port: int = 6379
     db: int = 0

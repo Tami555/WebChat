@@ -9,13 +9,12 @@ class WebSocketDispatcher:
     """Диспетчер для маршрутизации WebSocket сообщений"""
 
     def __init__(self):
-        """Регистрируем обработчики"""
+        """Регистрируем обработчики ("message" - дефолтный обработчик)"""
         self._handlers: Dict[str, Callable] = {
             "join_chat": WebSocketHandlers.handle_join_chat,
             "leave_chat": WebSocketHandlers.handle_leave_chat,
             "typing": WebSocketHandlers.handle_typing,
             "ping": WebSocketHandlers.handle_ping,
-            # "message" - дефолтный обработчик
         }
 
     def register(self, msg_type: str, handler: Callable):
@@ -27,7 +26,7 @@ class WebSocketDispatcher:
         raw_data: dict,
         ws: WebSocket,
         user: Users,
-        session: AsyncSession
+        session: AsyncSession,
     ):
         """Маршрутизация сообщения"""
         msg_type = raw_data.get("type", "message")

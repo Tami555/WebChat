@@ -3,7 +3,7 @@ __all__ = (
     "BaseRedisRepository",
     "verification_redis",
     "online_redis",
-    "pubsub_redis"
+    "pubsub_redis",
 )
 
 from .manager import redis_manager

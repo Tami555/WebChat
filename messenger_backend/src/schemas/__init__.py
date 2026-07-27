@@ -23,17 +23,29 @@ __all__ = (
     "CreateDialogRequest",
     "DialogDetailResponse",
     "ShortStickerResponse",
-    "StickerResponse"
+    "StickerResponse",
 )
 
 
 from .auth import (
-    TokenResponse, AccessTokenContent, RefreshTokenContent, TokenRequest, TokenVerifyResponse,
-    RegistrationUserRequest, LoginUserRequest,
-    PhoneVerificationRequest, VerificationCodeResponse
+    TokenResponse,
+    AccessTokenContent,
+    RefreshTokenContent,
+    TokenRequest,
+    TokenVerifyResponse,
+    RegistrationUserRequest,
+    LoginUserRequest,
+    PhoneVerificationRequest,
+    VerificationCodeResponse,
 )
 from .users import UserResponse, ShortUserResponse
-from .messages import ShortMessageResponse, MessageResponse, MessageCreateRequest, SaveMessageFileRequest, UploadMessageFileRequest
+from .messages import (
+    ShortMessageResponse,
+    MessageResponse,
+    MessageCreateRequest,
+    SaveMessageFileRequest,
+    UploadMessageFileRequest,
+)
 from .chats import ChatResponse, AllChatsResponse
 from .groups import CreateGroupRequest, GroupResponse, CreateGroupWithMembersRequest
 from .dialogs import CreateDialogRequest, DialogDetailResponse

@@ -20,10 +20,9 @@ class UserService:
 
     @staticmethod
     async def get_user_ids_by_usernames(
-        usernames: Iterable[str],
-        session: AsyncSession
+        usernames: Iterable[str], session: AsyncSession
     ) -> list[UUID]:
-        """Получение ID пользователей по их именам"""
+        """Получение ID пользователей по их username"""
         if not usernames:
             return []
         return await UserCRUD.get_user_ids_by_usernames(usernames, session)

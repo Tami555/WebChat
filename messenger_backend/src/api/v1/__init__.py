@@ -7,7 +7,6 @@ from .endpoints.chats import router as chatting_router
 from .endpoints.groups import router as groups_router
 from .endpoints.dialogs import router as dialogs_router
 
-
 router = APIRouter()
 router.include_router(auth_router, prefix="/auth", tags=["Authentication"])
 router.include_router(users_router, prefix="/users", tags=["Users"])
@@ -17,4 +16,4 @@ router.include_router(groups_router, prefix="/groups", tags=["Groups"])
 router.include_router(dialogs_router, prefix="/dialogs", tags=["Dialogs"])
 
 
-__all__ = ("router", )
+__all__ = ("router",)

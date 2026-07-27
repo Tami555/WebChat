@@ -4,7 +4,8 @@ from .messages import ShortMessageResponse
 
 
 class ChatResponse(BaseModel):
-    """ Схема чата """
+    """Схема чата"""
+
     id: UUID
     title: str
     avatar_url: str | None
@@ -13,7 +14,7 @@ class ChatResponse(BaseModel):
 
 
 class AllChatsResponse(BaseModel):
-    """ Схема чатов всех типов """
+    """Схема чатов всех типов"""
+
     dialogs: list[ChatResponse]
     groups: list[ChatResponse]
-    

@@ -18,4 +18,3 @@ class ColorFormatter(logging.Formatter):
         if record.levelname in self.COLORS:
             return f"{self.COLORS[record.levelname]}{log_message}{self.RESET}"
         return log_message
-    

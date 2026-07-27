@@ -1,10 +1,4 @@
-__all__ = (
-    "DialogCRUD",
-    "GroupCRUD",
-    "MessageCRUD",
-    "StickerCRUD",
-    "UserCRUD"
-)
+__all__ = ("DialogCRUD", "GroupCRUD", "MessageCRUD", "StickerCRUD", "UserCRUD")
 
 from .dialogs import DialogCRUD
 from .groups import GroupCRUD

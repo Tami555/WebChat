@@ -8,7 +8,7 @@ __all__ = (
     "StickerPacks",
     "Stickers",
     "UserContacts",
-    "Users"
+    "Users",
 )
 
 

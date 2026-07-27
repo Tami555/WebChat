@@ -12,17 +12,13 @@ from src.core.websocket.service import WebsocketService
 
 class WebSocketHandlers:
     """Обработчики WebSocket сообщений"""
+
     @staticmethod
     async def handle_join_chat(user: Users, data: dict, **kwargs):
         """Обработчик входа в чат"""
         chat_id = UUID(data["chat_id"])
         chat_type = ChatType(data["chat_type"])
-
-        websocket_manager.set_user_chat(
-            user.username,
-            chat_id,
-            chat_type
-        )
+        websocket_manager.set_user_chat(user.username, chat_id, chat_type)
 
     @staticmethod
     async def handle_leave_chat(user: Users, **kwargs):
@@ -30,11 +26,7 @@ class WebSocketHandlers:
         websocket_manager.clear_user_chat(user.username)
 
     @staticmethod
-    async def handle_typing(
-        user: Users,
-        session: AsyncSession,
-        data: dict
-    ):
+    async def handle_typing(user: Users, session: AsyncSession, data: dict):
         """Обработчик статуса печатания"""
         chat_id = UUID(data["chat_id"])
         chat_type = ChatType(data["chat_type"])
@@ -45,7 +37,7 @@ class WebSocketHandlers:
             chat_id=chat_id,
             chat_type=chat_type,
             is_typing=is_typing,
-            session=session
+            session=session,
         )
 
     @staticmethod
@@ -53,23 +45,24 @@ class WebSocketHandlers:
         ws: WebSocket,
         user: Users,
         session: AsyncSession,
-        data: dict
+        data: dict,
     ):
         """Обработчик создания сообщения"""
         message_data = MessageCreateRequest(**data)
         message_data.created_at = datetime.datetime.now()
-
         result = await WebsocketService.process_message(
             sender_user=user,
             message_data=message_data,
-            session=session
+            session=session,
         )
         await ws.send_json(result)
 
     @staticmethod
     async def handle_ping(ws: WebSocket, **kwargs):
         """Обработчик ping (keep-alive)"""
-        await ws.send_json({
-            "status": "pong",
-            "timestamp": datetime.datetime.now(datetime.UTC).isoformat()
-        })
+        await ws.send_json(
+            {
+                "status": "pong",
+                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
+            }
+        )

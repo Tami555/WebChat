@@ -2,6 +2,7 @@ from enum import StrEnum as PyEnum
 
 
 class TokenType(PyEnum):
-    """ Типы токенов """
+    """Типы токенов"""
+
     ACCESS_TOKEN = "access"
     REFRESH_TOKEN = "refresh"

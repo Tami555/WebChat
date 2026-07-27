@@ -18,7 +18,7 @@ class OnlineUsersRedisRepository(BaseRedisRepository):
         await self.client.sadd(self.ONLINE_NAMESPACE, username)
 
     async def remove_user(self, username: str) -> None:
-        """Убрать пользователя из онлайна"""
+        """Убрать пользователя из онлайн"""
         server_key = self._key(self.SERVER_NAMESPACE, username)
         await self.client.delete(server_key)
         await self.client.srem(self.ONLINE_NAMESPACE, username)

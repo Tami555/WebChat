@@ -10,7 +10,7 @@ def encode_jwt(
     key: str = settings.auth.app_secret_key,
     algorithm: str = settings.auth.jwt_algorithm,
 ) -> bytes | str:
-    """ Из данных пользователя формируем токен"""
+    """Из данных пользователя формируем токен"""
     now = datetime.now(timezone.utc)
     payload["iat"] = now
     payload["exp"] = now + timedelta(minutes=expire_minutes)
@@ -22,8 +22,12 @@ def encode_jwt(
 def decode_jwt(
     token: str | bytes,
     key: str = settings.auth.app_secret_key,
-    algorithm: str = settings.auth.jwt_algorithm
+    algorithm: str = settings.auth.jwt_algorithm,
 ) -> dict:
-    """ Из токена получаем данные пользователя """
-    decode = jwt.decode(token, key, algorithms=[algorithm,])
+    """Из токена получаем данные пользователя"""
+    decode = jwt.decode(
+        token,
+        key,
+        algorithms=[algorithm],
+    )
     return decode

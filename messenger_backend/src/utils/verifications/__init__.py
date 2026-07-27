@@ -1,5 +1,3 @@
-__all__ = (
-    "VerificationCodeGenerator",
-)
+__all__ = ("VerificationCodeGenerator",)
 
 from .code_generator import VerificationCodeGenerator

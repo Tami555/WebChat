@@ -10,12 +10,13 @@ from src.services import MessageService
 
 class FileService:
     """Сервис для работы с файлами"""
+
     @staticmethod
     async def upload_message_file(
         upload_data: UploadMessageFileRequest,
         upload_file: UploadFile,
         user: Users,
-        session: AsyncSession
+        session: AsyncSession,
     ):
         """Проверка корректности и загрузка файла сообщения"""
         # Проверка, что отправитель является участником чата
@@ -23,13 +24,15 @@ class FileService:
             user_id=user.id,
             chat_id=upload_data.chat_id,
             chat_type=upload_data.chat_type,
-            session=session
+            session=session,
         )
 
         # Проверка на тип сообщения и тип файла
         real_file_type = determining_file_type(upload_file.content_type)
         if real_file_type != upload_data.file_type:
-            raise NotCorrectMessageTypeForFileTypeError(upload_data.file_type, upload_file.content_type)
+            raise NotCorrectMessageTypeForFileTypeError(
+                upload_data.file_type, upload_file.content_type
+            )
 
         # Сохраняем файл
         file_manager = get_file_manager()
@@ -37,8 +40,8 @@ class FileService:
             data=SaveMessageFileRequest(
                 chat_id=upload_data.chat_id,
                 file_type=upload_data.file_type,
-                username=user.username
+                username=user.username,
             ),
-            file=upload_file
+            file=upload_file,
         )
         return save_file_url

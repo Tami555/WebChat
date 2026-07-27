@@ -6,13 +6,14 @@ from src.utils.verifications import VerificationCodeGenerator
 from src.exceptions import (
     VerificationCodeExpiredError,
     InvalidVerificationCodeError,
-    TooManyAttemptsError
+    TooManyAttemptsError,
 )
 from src.utils.notifications import get_sms_manager
 
 
 class VerificationService:
     """Сервис для работы с верификацией телефона"""
+
     MAX_ATTEMPTS = settings.verification.max_attempts
 
     @staticmethod
@@ -26,10 +27,10 @@ class VerificationService:
         # Сохраняем в Redis
         await verification_redis.save(phone, code, data)
         return code
-    
+
     @staticmethod
     async def verify_code(phone: str, code: str) -> dict:
-        """ Проверка кода верификации """
+        """Проверка кода верификации"""
 
         # Получаем данные из Redis
         redis_data = await verification_redis.get(phone)
@@ -46,7 +47,9 @@ class VerificationService:
         stored_code = redis_data.get("code")
         if stored_code != code:
             new_attempts = await verification_redis.increment_attempts(phone)
-            raise InvalidVerificationCodeError(attempts=VerificationService.MAX_ATTEMPTS - new_attempts)
+            raise InvalidVerificationCodeError(
+                attempts=VerificationService.MAX_ATTEMPTS - new_attempts
+            )
 
         # Код верный
         user_data = json.loads(redis_data.get("data", {}))

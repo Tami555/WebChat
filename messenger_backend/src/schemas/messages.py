@@ -9,7 +9,8 @@ from .sticker import ShortStickerResponse, StickerResponse
 
 
 class ShortMessageResponse(BaseModel):
-    """ Схема сообщения (не полная) """
+    """Схема сообщения (не полная)"""
+
     sender: ShortUserResponse
     type: MessageType = MessageType.TEXT
     created_at: datetime.datetime
@@ -21,7 +22,8 @@ class ShortMessageResponse(BaseModel):
 
 
 class MessageResponse(ShortMessageResponse):
-    """ Схема сообщения """
+    """Схема сообщения"""
+
     id: UUID
     file_url: str | None = None
     sticker: StickerResponse | None = None
@@ -33,7 +35,8 @@ class MessageResponse(ShortMessageResponse):
 
 
 class MessageCreateRequest(BaseModel):
-    """ Схема создания сообщения """
+    """Схема создания сообщения"""
+
     chat_id: UUID
     chat_type: ChatType
     message_type: MessageType
@@ -62,12 +65,13 @@ class MessageCreateRequest(BaseModel):
             sticker_id=sticker_id,
             reply_message_id=reply_message_id,
             file_url=file_url,
-            created_at=created_at
+            created_at=created_at,
         )
 
 
 class UploadMessageFileRequest(BaseModel):
-    """ Схема отправки файла в чат """
+    """Схема отправки файла"""
+
     chat_id: UUID
     chat_type: ChatType
     file_type: MessageType
@@ -76,17 +80,16 @@ class UploadMessageFileRequest(BaseModel):
     def upload_message_file_by_form(
         chat_id: UUID = Form(...),
         chat_type: ChatType = Form(...),
-        file_type: MessageType = Form(...)
+        file_type: MessageType = Form(...),
     ) -> "UploadMessageFileRequest":
         return UploadMessageFileRequest(
-            chat_id=chat_id,
-            chat_type=chat_type,
-            file_type=file_type
+            chat_id=chat_id, chat_type=chat_type, file_type=file_type
         )
 
 
 class SaveMessageFileRequest(BaseModel):
-    """ Схема сохранения файла """
+    """Схема сохранения файла"""
+
     chat_id: UUID
     file_type: MessageType
     username: str
