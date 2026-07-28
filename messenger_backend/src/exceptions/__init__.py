@@ -24,6 +24,7 @@ __all__ = (
     "MessageNotFoundError",
     "FutureTimestampMessageError",
     "StickerNotFoundError",
+    "WebSocketMessageTypeNotFoundError",
 )
 
 
@@ -61,3 +62,4 @@ from .errors.messages import (
     FutureTimestampMessageError,
 )
 from .errors.stickers import StickerNotFoundError
+from .errors.websocket import WebSocketMessageTypeNotFoundError

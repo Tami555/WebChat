@@ -2,8 +2,12 @@ import datetime
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.schemas import MessageCreateRequest, MessageResponse
 from src.schemas.enums import ChatType
+from src.schemas import (
+    MessageCreateRequest,
+    MessageResponse,
+    TypingStatusResponse,
+)
 from src.services import MessageService, UserService
 from src.models import Users
 from src.core.redis import online_redis
@@ -90,28 +94,38 @@ class WebsocketService:
 
     @staticmethod
     async def broadcast_typing_status(
-        sender_username: str,
+        sender_user: Users,
         chat_id: UUID,
         chat_type: ChatType,
         is_typing: bool,
         session: AsyncSession,
     ):
         """Уведомить участников чата о статусе печатания"""
-        participants = await MessageService.get_chat_participants_username(
+        await MessageService.check_user_is_member(
+            user_id=sender_user.id,
             chat_id=chat_id,
             chat_type=chat_type,
             session=session,
         )
+        chat_participants = await MessageService.get_chat_participants_username(
+            chat_id=chat_id,
+            chat_type=chat_type,
+            session=session,
+        )
+        all_online = await online_redis.get_all_online()
+        online_users = chat_participants & all_online
+
         # Отправляем
-        for participant in participants:
+        sender_username = sender_user.username
+        response = TypingStatusResponse(
+            chat_id=chat_id,
+            chat_type=chat_type,
+            is_typing=is_typing,
+            username=sender_username,
+        )
+        for participant in online_users:
             if participant != sender_username:
                 await websocket_manager.send_to_user(
                     to_username=participant,
-                    data={
-                        "type": "typing_status",
-                        "username": sender_username,
-                        "is_typing": is_typing,
-                        "chat_id": str(chat_id),
-                        "chat_type": chat_type.value,
-                    },
+                    data=response.model_dump_json(),
                 )

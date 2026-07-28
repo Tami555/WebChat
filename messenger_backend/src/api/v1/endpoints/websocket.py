@@ -39,10 +39,10 @@ async def create_connection(
             except (WebSocketDisconnect, WebSocketException):
                 break
             except Exception as e:
-                logger.exception(f"WebSocket Error:", exc_info=e)
+                logger.exception("Ошибка WebSocket:", exc_info=e)
                 await ws.send_json({"status": "error", "error": str(e)})
     except (WebSocketDisconnect, WebSocketException) as e:
-        logger.exception(f"WebSocket Error:", exc_info=e)
-        logger.info(f"Пользователь {sender_username} отключен")
+        logger.exception("Ошибка WebSocket:", exc_info=e)
+        logger.info("Пользователь %s отключен", (sender_username,))
     finally:
         await websocket_manager.disconnect(sender_username)

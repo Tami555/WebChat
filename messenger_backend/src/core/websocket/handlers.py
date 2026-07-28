@@ -1,11 +1,14 @@
-from uuid import UUID
 import datetime
 from fastapi import WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models.users import Users
-from src.schemas import MessageCreateRequest
-from src.schemas.enums import ChatType
+from src.schemas import (
+    JoinChatMessageRequest,
+    TypingMessageRequest,
+    MessageContentRequest,
+    PongMessageResponse,
+)
 from src.core.websocket.manager import websocket_manager
 from src.core.websocket.service import WebsocketService
 
@@ -14,11 +17,9 @@ class WebSocketHandlers:
     """Обработчики WebSocket сообщений"""
 
     @staticmethod
-    async def handle_join_chat(user: Users, data: dict, **kwargs):
+    async def handle_join_chat(user: Users, data: JoinChatMessageRequest, **kwargs):
         """Обработчик входа в чат"""
-        chat_id = UUID(data["chat_id"])
-        chat_type = ChatType(data["chat_type"])
-        websocket_manager.set_user_chat(user.username, chat_id, chat_type)
+        websocket_manager.set_user_chat(user.username, data.chat_id, data.chat_type)
 
     @staticmethod
     async def handle_leave_chat(user: Users, **kwargs):
@@ -26,17 +27,18 @@ class WebSocketHandlers:
         websocket_manager.clear_user_chat(user.username)
 
     @staticmethod
-    async def handle_typing(user: Users, session: AsyncSession, data: dict):
+    async def handle_typing(
+        user: Users,
+        session: AsyncSession,
+        data: TypingMessageRequest,
+        **kwargs,
+    ):
         """Обработчик статуса печатания"""
-        chat_id = UUID(data["chat_id"])
-        chat_type = ChatType(data["chat_type"])
-        is_typing = data.get("is_typing", True)
-
         await WebsocketService.broadcast_typing_status(
-            sender_username=user.username,
-            chat_id=chat_id,
-            chat_type=chat_type,
-            is_typing=is_typing,
+            sender_user=user,
+            chat_id=data.chat_id,
+            chat_type=data.chat_type,
+            is_typing=data.is_typing,
             session=session,
         )
 
@@ -45,10 +47,12 @@ class WebSocketHandlers:
         ws: WebSocket,
         user: Users,
         session: AsyncSession,
-        data: dict,
+        data: MessageContentRequest,
+        **kwargs,
     ):
-        """Обработчик создания сообщения"""
-        message_data = MessageCreateRequest(**data)
+        """Обработчик создания сообщения (с контентом)"""
+
+        message_data = data.message
         message_data.created_at = datetime.datetime.now()
         result = await WebsocketService.process_message(
             sender_user=user,
@@ -60,9 +64,4 @@ class WebSocketHandlers:
     @staticmethod
     async def handle_ping(ws: WebSocket, **kwargs):
         """Обработчик ping (keep-alive)"""
-        await ws.send_json(
-            {
-                "status": "pong",
-                "timestamp": datetime.datetime.now(datetime.UTC).isoformat(),
-            }
-        )
+        await ws.send_json(PongMessageResponse().model_dump_json())
