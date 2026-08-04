@@ -1,6 +1,6 @@
 import datetime
 from uuid import UUID
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from sqlalchemy import ForeignKey, func, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -20,8 +20,14 @@ class Dialogs(UUIDPrimaryKey, Base):
     created_at: Mapped[datetime.datetime] = mapped_column(
         default=datetime.datetime.now, server_default=func.now()
     )
-    last_message_id: Mapped[UUID] = mapped_column(
-        ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
+    last_message_id: Mapped[Optional[UUID]] = mapped_column(
+        ForeignKey(
+            "messages.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="dialogs_last_message_id_fkey",
+        ),
+        nullable=True,
     )
     __table_args__ = (
         UniqueConstraint("user1_id", "user2_id", name="unique_dialog_pair"),

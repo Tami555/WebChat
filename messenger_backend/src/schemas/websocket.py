@@ -1,7 +1,7 @@
 from datetime import datetime
 from uuid import UUID
 from typing import Literal, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 
 from src.schemas.enums import WebSocketMessageType, ChatType
 from .messages import MessageCreateRequest
@@ -12,9 +12,7 @@ class WebSocketMessageRequest(BaseModel):
 
     type: WebSocketMessageType
 
-    class Config:
-        from_attributes = True
-        use_enum_values = True
+    model_config = ConfigDict(from_attributes=True, use_enum_values=True)
 
 
 class JoinChatMessageRequest(WebSocketMessageRequest):

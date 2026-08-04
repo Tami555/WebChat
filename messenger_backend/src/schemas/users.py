@@ -1,5 +1,5 @@
 import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 
@@ -10,8 +10,7 @@ class ShortUserResponse(BaseModel):
     phone: PhoneNumber
     avatar_url: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserResponse(ShortUserResponse):

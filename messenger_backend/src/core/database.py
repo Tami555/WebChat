@@ -27,10 +27,15 @@ class DatabaseHelper:
             autocommit=False,
         )
 
-    async def create_database(self):
-        """Создание базы данных"""
+    async def create_database_tables(self):
+        """Создание таблиц в базе данных"""
         async with self.engine.begin() as connection:
             await connection.run_sync(Base.metadata.create_all)
+
+    async def drop_database_tables(self):
+        """Удаление таблиц в базе данных"""
+        async with self.engine.begin() as connection:
+            await connection.run_sync(Base.metadata.drop_all)
 
     async def create_session(self):
         """Создание сессии с базой данных"""

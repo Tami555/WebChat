@@ -1,6 +1,6 @@
 import datetime
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from fastapi import Form
 
 from .enums import MessageType, ChatType
@@ -17,8 +17,7 @@ class ShortMessageResponse(BaseModel):
     content: str | None = None
     sticker: ShortStickerResponse | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageResponse(ShortMessageResponse):
@@ -30,8 +29,7 @@ class MessageResponse(ShortMessageResponse):
     reply_message: ShortMessageResponse | None = None
     is_edited: bool
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class MessageCreateRequest(BaseModel):

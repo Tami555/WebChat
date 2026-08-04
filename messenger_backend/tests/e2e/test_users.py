@@ -1,0 +1,20 @@
+import pytest
+
+
+class TestUsers:
+    profile_url = "/api/v1/users/me"
+
+    @pytest.mark.asyncio
+    async def test_get_profile_success(self, auth_client, user_data):
+        """Успешное получение профиля"""
+        response = await auth_client.get(self.profile_url)
+        assert response.status_code == 200
+        data = response.json()
+        assert "username" in data
+        assert data["username"] == user_data["username"]
+
+    @pytest.mark.asyncio
+    async def test_not_authenticated_user(self, client):
+        response = await client.get(self.profile_url)
+        assert response.status_code == 401
+        assert response.json()["error"] is True

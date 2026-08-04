@@ -1,6 +1,6 @@
 import datetime
 from uuid import UUID
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Optional
 from sqlalchemy import String, Text, ForeignKey, func
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -24,8 +24,14 @@ class Groups(UUIDPrimaryKey, Base):
         default=datetime.datetime.now, server_default=func.now()
     )
     is_private: Mapped[bool] = mapped_column(default=True)
-    last_message_id: Mapped[UUID] = mapped_column(
-        ForeignKey("messages.id", ondelete="SET NULL"), nullable=True
+    last_message_id: Mapped[Optional[UUID]] = mapped_column(
+        ForeignKey(
+            "messages.id",
+            ondelete="SET NULL",
+            use_alter=True,
+            name="groups_last_message_id_fkey",
+        ),
+        nullable=True,
     )
     # Отношения
     creater_user: Mapped["Users"] = relationship(
