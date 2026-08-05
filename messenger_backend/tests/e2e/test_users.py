@@ -15,6 +15,7 @@ class TestUsers:
 
     @pytest.mark.asyncio
     async def test_not_authenticated_user(self, client):
+        """Ошибка получения профиля при неавторизованности"""
         response = await client.get(self.profile_url)
         assert response.status_code == 401
         assert response.json()["error"] is True

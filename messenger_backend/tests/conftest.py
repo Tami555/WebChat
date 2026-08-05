@@ -1,26 +1,32 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
 
+from unittest.mock import patch
+from src.core.config import get_settings
+
+
+@pytest.fixture(scope="session")
+def test_settings():
+    """Настройки для тестов"""
+    return get_settings(".env.test")
+
+
+@pytest.fixture(autouse=True)
+def override_settings(test_settings):
+    """Переопределяем глобальные настройки для всех тестов"""
+    import src.core.config
+
+    with patch.object(src.core.config, "settings", test_settings):
+        yield
+
 
 @pytest.fixture
-def test_db_url():
-    from src.core.config import settings
-
-    db_name = "web_chat_testing_db"
-    config_db = settings.db
-    return f"postgresql+asyncpg://{config_db.user}:{config_db.password}@{config_db.host}:{config_db.port}/{db_name}"
-
-
-@pytest.fixture
-async def test_db(test_db_url):
+async def test_db():
     """Работа с тестовой БД"""
-    from src.core.database import DatabaseHelper
+    from src.core.database import database_helper as test_helper
 
-    test_helper = DatabaseHelper(test_db_url)
     await test_helper.create_database_tables()
-
     yield test_helper
-
     await test_helper.drop_database_tables()
     await test_helper.engine.dispose()
 
@@ -33,16 +39,19 @@ async def db_session(test_db):
 
 
 @pytest.fixture
-async def client(test_db, db_session):
+async def redis_connect():
+    """Подключение к redis"""
+    from src.core.redis import redis_manager
+
+    await redis_manager.connect()
+    yield
+    await redis_manager.disconnect()
+
+
+@pytest.fixture
+async def client(test_db):
     """HTTP клиент для тестирования эндпоинтов"""
     from src.main import app
-    from src.core.database import database_helper
-
-    async def override_get_db():
-        yield db_session
-
-    # Переопределяем зависимость в приложении
-    app.dependency_overrides[database_helper.create_scoped_session] = override_get_db
 
     async with AsyncClient(
         transport=ASGITransport(app=app),
@@ -50,9 +59,6 @@ async def client(test_db, db_session):
         timeout=30.0,
     ) as client:
         yield client
-
-    # Очищаем переопределения после теста
-    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -62,7 +68,7 @@ def user_data():
 
     return {
         "username": "tami",
-        "phone": "+79171234567",
+        "phone": "+7-917-123-45-67",
         "code": "234567",
         "last_seen": datetime.datetime.now(),
     }

@@ -38,6 +38,7 @@ class DatabaseConfig(BaseModel):
     name: str = ""
     host: str = "localhost"
     port: str = 5432
+    echo: bool = True
 
     @property
     def db_async_url(self) -> str:
@@ -53,7 +54,7 @@ class AuthenticationConfig(BaseModel):
     expire_refresh_token_minutes: int = 43200  # 30 дней
 
 
-class RedisNamespaces(BaseSettings):
+class RedisNamespaces(BaseModel):
     """Названия ключей Redis"""
 
     phone_verification: str = "phone:verification"
@@ -62,7 +63,7 @@ class RedisNamespaces(BaseSettings):
     pubsub_server: str = "pubsub:server"
 
 
-class RedisConfig(BaseSettings):
+class RedisConfig(BaseModel):
     """Конфигурация Redis"""
 
     host: str = "localhost"
@@ -91,6 +92,12 @@ class Settings(BaseSettings):
         env_prefix="WEBCHAT_",
         case_sensitive=False,
     )
+
+
+def get_settings(env_file: str = ".env") -> Settings:
+    """Создает настройки из указанного .env файла"""
+    env_path = BASE_PATH / env_file
+    return Settings(_env_file=env_path)
 
 
 settings = Settings()

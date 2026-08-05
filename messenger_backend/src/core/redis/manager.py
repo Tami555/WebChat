@@ -21,7 +21,7 @@ class RedisManager:
 
     async def disconnect(self):
         if self._client:
-            await self._client.close()
+            await self._client.aclose()
 
     def __getattr__(self, name):
         if self._client is None:

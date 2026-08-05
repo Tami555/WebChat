@@ -16,7 +16,7 @@ class DatabaseHelper:
         """Инициализация: создание движка БД и фабрики сессий"""
         self.engine = create_async_engine(
             url=db_url,
-            echo=True,
+            echo=settings.db.echo,
             pool_size=20,
             max_overflow=30,
         )
