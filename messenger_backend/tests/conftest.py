@@ -1,13 +1,13 @@
 import pytest
 from httpx import AsyncClient, ASGITransport
-
 from unittest.mock import patch
-from src.core.config import get_settings
 
 
 @pytest.fixture(scope="session")
 def test_settings():
     """Настройки для тестов"""
+    from src.core.config import get_settings
+
     return get_settings(".env.test")
 
 
@@ -29,13 +29,6 @@ async def test_db():
     yield test_helper
     await test_helper.drop_database_tables()
     await test_helper.engine.dispose()
-
-
-@pytest.fixture
-async def db_session(test_db):
-    """Создание сессии БД"""
-    async for session in test_db.create_session():
-        yield session
 
 
 @pytest.fixture
@@ -66,31 +59,43 @@ def user_data():
     """Пользовательские данные"""
     import datetime
 
-    return {
-        "username": "tami",
-        "phone": "+7-917-123-45-67",
-        "code": "234567",
-        "last_seen": datetime.datetime.now(),
+    last_seen = datetime.datetime.now()
+    custom_users = {
+        1: {
+            "username": "tami",
+            "phone": "tel:+7-917-123-45-67",
+            "code": "234567",
+            "last_seen": last_seen,
+        },
+        2: {
+            "username": "tobbi",
+            "phone": "tel:+7-919-987-65-43",
+            "code": "876543",
+            "last_seen": last_seen,
+        },
     }
+    return custom_users
 
 
 @pytest.fixture
-async def created_user(user_data, db_session):
+async def created_user(user_data, test_db):
     """Создает пользователя в БД и возвращает его"""
     from src.crud.users import UserCRUD
 
-    existing = await UserCRUD.get_user_by_phone(user_data["phone"], db_session)
-    if not existing:
-        user = await UserCRUD.create_user(
-            {
-                "username": user_data["username"],
-                "phone": user_data["phone"],
-                "last_seen": user_data["last_seen"],
-            },
-            db_session,
-        )
-        return user
-    return existing
+    user_data = user_data[1]
+    async for db_session in test_db.create_session():
+        existing = await UserCRUD.get_user_by_phone(user_data["phone"], db_session)
+        if not existing:
+            user = await UserCRUD.create_user(
+                {
+                    "username": user_data["username"],
+                    "phone": user_data["phone"],
+                    "last_seen": user_data["last_seen"],
+                },
+                db_session,
+            )
+            return user
+        return existing
 
 
 @pytest.fixture

@@ -11,7 +11,7 @@ class TestUsers:
         assert response.status_code == 200
         data = response.json()
         assert "username" in data
-        assert data["username"] == user_data["username"]
+        assert data["username"] == user_data[1]["username"]
 
     @pytest.mark.asyncio
     async def test_not_authenticated_user(self, client):
