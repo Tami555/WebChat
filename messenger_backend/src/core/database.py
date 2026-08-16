@@ -48,8 +48,10 @@ class DatabaseHelper:
             scopefunc=current_task,
             session_factory=self.session_factory,
         )
-        yield session
-        await session.remove()
+        try:
+            yield session
+        finally:
+            await session.remove()
 
 
 database_helper = DatabaseHelper(settings.db.db_async_url)
