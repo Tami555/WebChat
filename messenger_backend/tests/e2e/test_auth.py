@@ -13,7 +13,7 @@ class TestAuth:
             registration_request_url = "/api/v1/auth/register"
 
             @pytest.mark.asyncio
-            async def test_registration_request_success(
+            async def test_request_registration_success(
                 self, redis_connect, client, user_data
             ):
                 """Тест на успешный запрос регистрации"""
@@ -39,7 +39,7 @@ class TestAuth:
                 assert redis_data.get("code") == user_data["code"]
 
             @pytest.mark.asyncio
-            async def test_registration_request_with_existing_phone(
+            async def test_request_registration_with_existing_phone(
                 self, created_user, redis_connect, client, user_data
             ):
                 """Тест запроса регистрации с существующим телефоном"""
@@ -58,7 +58,7 @@ class TestAuth:
                 )
 
             @pytest.mark.asyncio
-            async def test_registration_request_with_existing_username(
+            async def test_request_registration_with_existing_username(
                 self, created_user, redis_connect, client, user_data
             ):
                 """Тест запроса регистрации с существующим username"""
@@ -78,6 +78,156 @@ class TestAuth:
             """Тесты подтверждения регистрации"""
 
             registration_verify_url = "/api/v1/auth/verify-registration"
+
+            @pytest.mark.asyncio
+            async def test_complete_registration_success(
+                self, redis_connect, client, user_data, test_db
+            ):
+                """Тест на успешное подтверждение регистрации и создание пользователя"""
+                from src.core.redis import verification_redis
+                from src.schemas import TokenResponse
+                from src.crud import UserCRUD
+
+                phone, code, username = (
+                    user_data[1]["phone"],
+                    user_data[1]["code"],
+                    user_data[1]["username"],
+                )
+                # Сохраняем данные в Redis
+                await verification_redis.save(
+                    phone,
+                    code,
+                    {
+                        "username": username,
+                        "phone": phone,
+                    },
+                )
+                # Запрос подтверждения
+                response = await client.post(
+                    self.registration_verify_url,
+                    json={"code": code, "phone": phone},
+                )
+                assert response.status_code == 200
+                TokenResponse(**response.json())
+
+                # Проверяем наличие пользователя в БД
+                async for db_session in test_db.create_session():
+                    new_user = await UserCRUD.get_user_by_phone(phone, db_session)
+                    assert new_user is not None
+                    assert new_user.username == username
+                    assert new_user.phone == phone
+
+                # Проверка, что в Redis значение удалено
+                redis_data = await verification_redis.get(phone)
+                assert redis_data is None
+
+            @pytest.mark.asyncio
+            async def test_complete_registration_without_redis_data(
+                self, redis_connect, client, user_data
+            ):
+                """Тест запроса подтверждения регистрации, без данных в Redis"""
+                response = await client.post(
+                    self.registration_verify_url,
+                    json={"code": user_data[1]["code"], "phone": user_data[1]["phone"]},
+                )
+                assert response.status_code == 400
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Время действия кода верификации истекло"
+
+            @pytest.mark.asyncio
+            async def test_complete_registration_with_too_many_attempts(
+                self, redis_connect, client, user_data
+            ):
+                """Тест запроса подтверждения регистрации, с большим количеством попыток"""
+                from src.core.redis import verification_redis
+                from src.core.config import settings
+
+                # Сохраняем данные в Redis
+                user_data = user_data[1]
+                await verification_redis.save(
+                    user_data["phone"],
+                    user_data["code"],
+                    {
+                        "username": user_data["username"],
+                        "phone": user_data["phone"],
+                    },
+                )
+                # Увеличиваем попытки
+                for att in range(settings.verification.max_attempts):
+                    await verification_redis.increment_attempts(user_data["phone"])
+
+                # Запрос подтверждения
+                response = await client.post(
+                    self.registration_verify_url,
+                    json={"code": user_data["code"], "phone": user_data["phone"]},
+                )
+                assert response.status_code == 400
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Слишком много попыток"
+
+            @pytest.mark.asyncio
+            async def test_complete_registration_with_invalid_code(
+                self, redis_connect, client, user_data
+            ):
+                """Тест запроса подтверждения регистрации с неправильным кодом"""
+                from src.core.redis import verification_redis
+
+                # Сохраняем данные в Redis
+                await verification_redis.save(
+                    user_data[1]["phone"],
+                    user_data[1]["code"],
+                    {
+                        "username": user_data[1]["username"],
+                        "phone": user_data[1]["phone"],
+                    },
+                )
+                # Запрос подтверждения с неверным кодом
+                response = await client.post(
+                    self.registration_verify_url,
+                    json={"code": user_data[2]["code"], "phone": user_data[1]["phone"]},
+                )
+                assert response.status_code == 400
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+
+                # Проверка, что попытки увеличились
+                redis_data = await verification_redis.get(user_data[1]["phone"])
+                assert redis_data is not None
+                assert redis_data["code"] == user_data[1]["code"]
+                assert int(redis_data["attempts"]) == 1
+
+            @pytest.mark.asyncio
+            async def test_complete_registration_without_user_data(
+                self, redis_connect, client, user_data
+            ):
+                """Тест запроса подтверждения регистрации, с пустыми данными о пользователе"""
+                from pydantic import ValidationError
+
+                from src.core.redis import verification_redis
+
+                # Сохраняем данные в Redis (без данных о пользователе)
+                await verification_redis.save(
+                    user_data[1]["phone"], user_data[1]["code"], {}
+                )
+                with pytest.raises(ValidationError):
+                    # Запрос подтверждения
+                    response = await client.post(
+                        self.registration_verify_url,
+                        json={
+                            "code": user_data[1]["code"],
+                            "phone": user_data[1]["phone"],
+                        },
+                    )
+                    assert response.status_code == 422
+                    data = response.json()
+                    assert "error" in data and "message" in data
+                    assert data["error"] is True
+                    assert data["message"] == "Невалидные данные  !!!"
 
         @pytest.mark.asyncio
         async def test_full_registration_success(self, client, user_data):
