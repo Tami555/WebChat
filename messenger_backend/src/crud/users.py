@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from src.models import Users
+from src.schemas import CreateUserRequest
 
 
 class UserCRUD:
@@ -61,9 +62,9 @@ class UserCRUD:
         return result.scalar_one_or_none()
 
     @staticmethod
-    async def create_user(user_data: dict, session: AsyncSession) -> Users:
+    async def create_user(user_data: CreateUserRequest, session: AsyncSession) -> Users:
         """Создание пользователя"""
-        new_user = Users(**user_data)
+        new_user = Users(**user_data.model_dump())
         session.add(new_user)
         await session.commit()
         return new_user

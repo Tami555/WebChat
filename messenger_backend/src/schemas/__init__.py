@@ -10,6 +10,7 @@ __all__ = (
     "VerificationCodeResponse",
     "UserResponse",
     "ShortUserResponse",
+    "CreateUserRequest",
     "ShortMessageResponse",
     "MessageResponse",
     "MessageCreateRequest",
@@ -46,7 +47,7 @@ from .auth import (
     PhoneVerificationRequest,
     VerificationCodeResponse,
 )
-from .users import UserResponse, ShortUserResponse
+from .users import UserResponse, ShortUserResponse, CreateUserRequest
 from .messages import (
     ShortMessageResponse,
     MessageResponse,

@@ -17,6 +17,7 @@ from src.schemas import (
     RegistrationUserRequest,
     LoginUserRequest,
     PhoneVerificationRequest,
+    CreateUserRequest,
 )
 from src.services.verification_service import VerificationService
 
@@ -52,7 +53,9 @@ class AuthService:
         )
         # Создаем пользователя
         user_data["last_seen"] = datetime.datetime.now()
-        new_user = await UserCRUD.create_user(user_data=user_data, session=session)
+        new_user = await UserCRUD.create_user(
+            user_data=CreateUserRequest(**user_data), session=session
+        )
         # Отдаем токены
         return AuthService.create_tokens_by_user(new_user)
 

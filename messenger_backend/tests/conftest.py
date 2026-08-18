@@ -81,19 +81,17 @@ def user_data():
 async def created_user(user_data, test_db):
     """Создает пользователя в БД и возвращает его"""
     from src.crud.users import UserCRUD
+    from src.schemas import CreateUserRequest
 
-    user_data = user_data[1]
+    user_data = CreateUserRequest(
+        username=user_data[1]["username"],
+        phone=user_data[1]["phone"],
+        last_seen=user_data[1]["last_seen"],
+    )
     async for db_session in test_db.create_session():
-        existing = await UserCRUD.get_user_by_phone(user_data["phone"], db_session)
+        existing = await UserCRUD.get_user_by_phone(user_data.phone, db_session)
         if not existing:
-            user = await UserCRUD.create_user(
-                {
-                    "username": user_data["username"],
-                    "phone": user_data["phone"],
-                    "last_seen": user_data["last_seen"],
-                },
-                db_session,
-            )
+            user = await UserCRUD.create_user(user_data, db_session)
             return user
         return existing
 
