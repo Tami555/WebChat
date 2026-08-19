@@ -55,58 +55,39 @@ async def client(test_db):
 
 
 @pytest.fixture
-def user_data():
-    """Пользовательские данные"""
-    import datetime
-
-    last_seen = datetime.datetime.now()
-    custom_users = {
-        1: {
-            "username": "tami",
-            "phone": "tel:+7-917-123-45-67",
-            "code": "234567",
-            "last_seen": last_seen,
-        },
-        2: {
-            "username": "tobbi",
-            "phone": "tel:+7-919-987-65-43",
-            "code": "876543",
-            "last_seen": last_seen,
-        },
-    }
-    return custom_users
-
-
-@pytest.fixture
-async def created_user(user_data, test_db):
-    """Создает пользователя в БД и возвращает его"""
+async def created_user_1(test_db):
+    """Создает пользователя (№1) в БД и возвращает его"""
     from src.crud.users import UserCRUD
     from src.schemas import CreateUserRequest
+    from .fixtures.data import UserDataFactory
 
-    user_data = CreateUserRequest(
-        username=user_data[1]["username"],
-        phone=user_data[1]["phone"],
-        last_seen=user_data[1]["last_seen"],
-    )
+    user_data = UserDataFactory.user_1()
     async for db_session in test_db.create_session():
-        existing = await UserCRUD.get_user_by_phone(user_data.phone, db_session)
+        existing = await UserCRUD.get_user_by_phone(user_data["phone"], db_session)
         if not existing:
-            user = await UserCRUD.create_user(user_data, db_session)
+            user = await UserCRUD.create_user(
+                CreateUserRequest(
+                    username=user_data["username"],
+                    phone=user_data["phone"],
+                    last_seen=user_data["last_seen"],
+                ),
+                db_session,
+            )
             return user
         return existing
 
 
 @pytest.fixture
-async def auth_token(created_user):
-    """Возвращает JWT токен для авторизованных запросов"""
+async def auth_token_user_1(created_user_1):
+    """Возвращает JWT токен для авторизованных запросов (Пользователя №1)"""
     from src.services import AuthService
 
-    tokens = AuthService.create_tokens_by_user(created_user)
+    tokens = AuthService.create_tokens_by_user(created_user_1)
     return tokens.access_token
 
 
 @pytest.fixture
-async def auth_client(client, auth_token):
-    """Авторизованный HTTP-клиент"""
-    client.headers["Authorization"] = f"Bearer {auth_token}"
+async def auth_client_user_1(client, auth_token_user_1):
+    """Авторизованный HTTP-клиент (Пользователь №1)"""
+    client.headers["Authorization"] = f"Bearer {auth_token_user_1}"
     return client

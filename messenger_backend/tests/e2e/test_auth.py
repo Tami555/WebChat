@@ -13,14 +13,13 @@ class TestAuth:
             registration_request_url = "/api/v1/auth/register"
 
             @pytest.mark.asyncio
-            async def test_request_registration_success(
-                self, redis_connect, client, user_data
-            ):
+            async def test_request_registration_success(self, redis_connect, client):
                 """Тест на успешный запрос регистрации"""
                 from src.schemas import VerificationCodeResponse
                 from src.core.redis import verification_redis
+                from tests.fixtures.data import UserDataFactory
 
-                user_data = user_data[1]
+                user_data = UserDataFactory.user_1()
 
                 response = await client.post(
                     self.registration_request_url,
@@ -40,14 +39,19 @@ class TestAuth:
 
             @pytest.mark.asyncio
             async def test_request_registration_with_existing_phone(
-                self, created_user, redis_connect, client, user_data
+                self, created_user_1, redis_connect, client
             ):
                 """Тест запроса регистрации с существующим телефоном"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data_1 = UserDataFactory.user_1()
+                user_data_2 = UserDataFactory.user_2()
+
                 response = await client.post(
                     self.registration_request_url,
                     json={
-                        "username": user_data[2]["username"],
-                        "phone": user_data[1]["phone"],
+                        "username": user_data_2["username"],
+                        "phone": user_data_1["phone"],
                     },
                 )
                 assert response.status_code == 409
@@ -59,14 +63,19 @@ class TestAuth:
 
             @pytest.mark.asyncio
             async def test_request_registration_with_existing_username(
-                self, created_user, redis_connect, client, user_data
+                self, created_user_1, redis_connect, client
             ):
                 """Тест запроса регистрации с существующим username"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data_1 = UserDataFactory.user_1()
+                user_data_2 = UserDataFactory.user_2()
+
                 response = await client.post(
                     self.registration_request_url,
                     json={
-                        "username": user_data[1]["username"],
-                        "phone": user_data[2]["phone"],
+                        "username": user_data_1["username"],
+                        "phone": user_data_2["phone"],
                     },
                 )
                 assert response.status_code == 409
@@ -81,17 +90,20 @@ class TestAuth:
 
             @pytest.mark.asyncio
             async def test_complete_registration_success(
-                self, redis_connect, client, user_data, test_db
+                self, redis_connect, client, test_db
             ):
                 """Тест на успешное подтверждение регистрации и создание пользователя"""
                 from src.core.redis import verification_redis
                 from src.schemas import TokenResponse
                 from src.crud import UserCRUD
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
 
                 phone, code, username = (
-                    user_data[1]["phone"],
-                    user_data[1]["code"],
-                    user_data[1]["username"],
+                    user_data["phone"],
+                    user_data["code"],
+                    user_data["username"],
                 )
                 # Сохраняем данные в Redis
                 await verification_redis.save(
@@ -123,12 +135,16 @@ class TestAuth:
 
             @pytest.mark.asyncio
             async def test_complete_registration_without_redis_data(
-                self, redis_connect, client, user_data
+                self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации, без данных в Redis"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
                 response = await client.post(
                     self.registration_verify_url,
-                    json={"code": user_data[1]["code"], "phone": user_data[1]["phone"]},
+                    json={"code": user_data["code"], "phone": user_data["phone"]},
                 )
                 assert response.status_code == 400
                 data = response.json()
@@ -138,14 +154,16 @@ class TestAuth:
 
             @pytest.mark.asyncio
             async def test_complete_registration_with_too_many_attempts(
-                self, redis_connect, client, user_data
+                self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации, с большим количеством попыток"""
                 from src.core.redis import verification_redis
                 from src.core.config import settings
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis
-                user_data = user_data[1]
                 await verification_redis.save(
                     user_data["phone"],
                     user_data["code"],
@@ -171,24 +189,28 @@ class TestAuth:
 
             @pytest.mark.asyncio
             async def test_complete_registration_with_invalid_code(
-                self, redis_connect, client, user_data
+                self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации с неправильным кодом"""
                 from src.core.redis import verification_redis
+                from tests.fixtures.data import UserDataFactory
+
+                user_data_1 = UserDataFactory.user_1()
+                user_data_2 = UserDataFactory.user_2()
 
                 # Сохраняем данные в Redis
                 await verification_redis.save(
-                    user_data[1]["phone"],
-                    user_data[1]["code"],
+                    user_data_1["phone"],
+                    user_data_1["code"],
                     {
-                        "username": user_data[1]["username"],
-                        "phone": user_data[1]["phone"],
+                        "username": user_data_1["username"],
+                        "phone": user_data_1["phone"],
                     },
                 )
                 # Запрос подтверждения с неверным кодом
                 response = await client.post(
                     self.registration_verify_url,
-                    json={"code": user_data[2]["code"], "phone": user_data[1]["phone"]},
+                    json={"code": user_data_2["code"], "phone": user_data_1["phone"]},
                 )
                 assert response.status_code == 400
                 data = response.json()
@@ -196,31 +218,32 @@ class TestAuth:
                 assert data["error"] is True
 
                 # Проверка, что попытки увеличились
-                redis_data = await verification_redis.get(user_data[1]["phone"])
+                redis_data = await verification_redis.get(user_data_1["phone"])
                 assert redis_data is not None
-                assert redis_data["code"] == user_data[1]["code"]
+                assert redis_data["code"] == user_data_1["code"]
                 assert int(redis_data["attempts"]) == 1
 
             @pytest.mark.asyncio
             async def test_complete_registration_without_user_data(
-                self, redis_connect, client, user_data
+                self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации, с пустыми данными о пользователе"""
                 from pydantic import ValidationError
 
                 from src.core.redis import verification_redis
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis (без данных о пользователе)
-                await verification_redis.save(
-                    user_data[1]["phone"], user_data[1]["code"], {}
-                )
+                await verification_redis.save(user_data["phone"], user_data["code"], {})
                 with pytest.raises(ValidationError):
                     # Запрос подтверждения
                     response = await client.post(
                         self.registration_verify_url,
                         json={
-                            "code": user_data[1]["code"],
-                            "phone": user_data[1]["phone"],
+                            "code": user_data["code"],
+                            "phone": user_data["phone"],
                         },
                     )
                     assert response.status_code == 422
@@ -230,9 +253,11 @@ class TestAuth:
                     assert data["message"] == "Невалидные данные  !!!"
 
         @pytest.mark.asyncio
-        async def test_full_registration_success(self, client, user_data):
+        async def test_full_registration_success(self, client):
             """Тест на полную успешную регистрацию"""
-            user_data = user_data[1]
+            from tests.fixtures.data import UserDataFactory
+
+            user_data = UserDataFactory.user_1()
 
             reg = await client.post(
                 self.TestRequest.registration_request_url,
