@@ -690,7 +690,7 @@ class TestAuth:
             assert data["message"] == "Пользователь не найден"
 
         @pytest.mark.asyncio
-        async def test_get_new_token_by_refresh_token_expired(
+        async def test_get_new_token_by_expired_refresh_token(
             self, created_user_1, client
         ):
             """Тест запроса на получение нового access токена по refresh, истекшему по времени"""
@@ -720,6 +720,67 @@ class TestAuth:
             """Тест запроса на получение нового access токена, без refresh токена"""
 
             response = await client.post(self.refresh_token_url, json={})
+            assert response.status_code == 422
+            data = response.json()
+            assert "error" in data and "message" in data
+            assert data["error"] is True
+            assert data["message"] == "Невалидные данные  !!!"
+
+    class TestVerifyToken:
+        verify_token_url = "/api/v1/auth/verify"
+
+        @pytest.mark.asyncio
+        async def test_verify_token_success(self, auth_tokens_user_1, client):
+            """Тест на успешную проверку валидности access токена"""
+            from src.schemas import TokenVerifyResponse
+
+            response = await client.post(
+                self.verify_token_url, json={"token": auth_tokens_user_1.access_token}
+            )
+            assert response.status_code == 200
+            data = TokenVerifyResponse(**response.json())
+            assert data.is_verify_token is True
+
+        @pytest.mark.asyncio
+        async def test_verify_token_by_refresh_token(self, auth_tokens_user_1, client):
+            """Тест запроса на проверку валидности access токена по refresh токену (Неверный тип токена)"""
+
+            response = await client.post(
+                self.verify_token_url, json={"token": auth_tokens_user_1.refresh_token}
+            )
+            assert response.status_code == 401
+            data = response.json()
+            assert "error" in data and "message" in data
+            assert data["error"] is True
+            assert data["message"] == "Неверный тип токена. Ожидался: access"
+
+        @pytest.mark.asyncio
+        async def test_verify_token_by_expired_access_token(self, client):
+            """Тест запроса на проверку валидности access токена истекшему по времени"""
+            from src.core.security.tokens import create_jwt_token
+            from src.schemas import TokenVerifyResponse, enums
+            from tests.fixtures.data import UserDataFactory
+
+            user_data = UserDataFactory.user_1()
+
+            access_token = create_jwt_token(
+                type_token=enums.TokenType.ACCESS_TOKEN,
+                payload={"sub": user_data["username"]},
+                expire_minutes=0,
+            )
+
+            response = await client.post(
+                self.verify_token_url, json={"token": access_token}
+            )
+            assert response.status_code == 200
+            data = TokenVerifyResponse(**response.json())
+            assert data.is_verify_token is False
+
+        @pytest.mark.asyncio
+        async def test_verify_token_without_access_token(self, client):
+            """Тест запроса на проверку валидности access токена, без access токена"""
+
+            response = await client.post(self.verify_token_url, json={})
             assert response.status_code == 422
             data = response.json()
             assert "error" in data and "message" in data
