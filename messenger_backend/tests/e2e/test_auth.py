@@ -636,3 +636,92 @@ class TestAuth:
                 json={"code": user_data["code"], "phone": user_data["phone"]},
             )
             assert ver.status_code == 200
+
+    class TestRefreshToken:
+        """Тесты получения нового access (jwt) токена"""
+
+        refresh_token_url = "/api/v1/auth/refresh"
+
+        @pytest.mark.asyncio
+        async def test_get_new_token_success(self, auth_tokens_user_1, client):
+            """Тест на успешное получение нового access токена по refresh"""
+            from src.schemas import TokenResponse
+
+            response = await client.post(
+                self.refresh_token_url, json={"token": auth_tokens_user_1.refresh_token}
+            )
+            assert response.status_code == 200
+            data = response.json()
+            assert "access_token" in data and "token_type" in data
+            assert data["token_type"] == "Bearer"
+            TokenResponse(**data)
+
+        @pytest.mark.asyncio
+        async def test_get_new_token_by_access_token(self, auth_tokens_user_1, client):
+            """Тест запроса на получение нового access токена по access. Неверный тип токена"""
+            response = await client.post(
+                self.refresh_token_url, json={"token": auth_tokens_user_1.access_token}
+            )
+            assert response.status_code == 401
+            data = response.json()
+            assert "error" in data and "message" in data
+            assert data["error"] is True
+            assert data["message"] == "Неверный тип токена. Ожидался: refresh"
+
+        @pytest.mark.asyncio
+        async def test_get_new_token_by_refresh_token_not_existing_user(self, client):
+            """Тест запроса на получение нового access токена по refresh, не существующего пользователя"""
+            from src.core.config import settings
+            from src.core.security.tokens import create_jwt_token
+            from src.schemas.enums import TokenType
+
+            refresh_token = create_jwt_token(
+                type_token=TokenType.REFRESH_TOKEN,
+                payload={"sub": "user-1"},
+                expire_minutes=settings.auth.expire_refresh_token_minutes,
+            )
+            response = await client.post(
+                self.refresh_token_url, json={"token": refresh_token}
+            )
+            assert response.status_code == 404
+            data = response.json()
+            assert "error" in data and "message" in data
+            assert data["error"] is True
+            assert data["message"] == "Пользователь не найден"
+
+        @pytest.mark.asyncio
+        async def test_get_new_token_by_refresh_token_expired(
+            self, created_user_1, client
+        ):
+            """Тест запроса на получение нового access токена по refresh, истекшему по времени"""
+            from src.core.security.tokens import create_jwt_token
+            from src.schemas.enums import TokenType
+            from tests.fixtures.data import UserDataFactory
+
+            user_data = UserDataFactory.user_1()
+
+            refresh_token = create_jwt_token(
+                type_token=TokenType.REFRESH_TOKEN,
+                payload={"sub": user_data["username"]},
+                expire_minutes=0,
+            )
+
+            response = await client.post(
+                self.refresh_token_url, json={"token": refresh_token}
+            )
+            assert response.status_code == 401
+            data = response.json()
+            assert "error" in data and "message" in data
+            assert data["error"] is True
+            assert data["message"] == "Невалидный токен"
+
+        @pytest.mark.asyncio
+        async def test_get_new_token_without_refresh_token(self, client):
+            """Тест запроса на получение нового access токена, без refresh токена"""
+
+            response = await client.post(self.refresh_token_url, json={})
+            assert response.status_code == 422
+            data = response.json()
+            assert "error" in data and "message" in data
+            assert data["error"] is True
+            assert data["message"] == "Невалидные данные  !!!"

@@ -78,16 +78,16 @@ async def created_user_1(test_db):
 
 
 @pytest.fixture
-async def auth_token_user_1(created_user_1):
+async def auth_tokens_user_1(created_user_1):
     """Возвращает JWT токен для авторизованных запросов (Пользователя №1)"""
     from src.services import AuthService
 
     tokens = AuthService.create_tokens_by_user(created_user_1)
-    return tokens.access_token
+    return tokens
 
 
 @pytest.fixture
-async def auth_client_user_1(client, auth_token_user_1):
+async def auth_client_user_1(client, auth_tokens_user_1):
     """Авторизованный HTTP-клиент (Пользователь №1)"""
-    client.headers["Authorization"] = f"Bearer {auth_token_user_1}"
+    client.headers["Authorization"] = f"Bearer {auth_tokens_user_1.access_token}"
     return client
