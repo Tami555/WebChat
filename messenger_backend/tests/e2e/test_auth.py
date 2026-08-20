@@ -18,6 +18,7 @@ class TestAuth:
                 from src.schemas import VerificationCodeResponse
                 from src.core.redis import verification_redis
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_success_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -28,9 +29,9 @@ class TestAuth:
                         "phone": user_data["phone"],
                     },
                 )
-
-                assert response.status_code == 200
-                VerificationCodeResponse(**response.json())
+                assert_success_response(
+                    response=response, response_model=VerificationCodeResponse
+                )
 
                 redis_data = await verification_redis.get(user_data["phone"])
                 assert redis_data is not None
@@ -43,6 +44,7 @@ class TestAuth:
             ):
                 """Тест запроса регистрации с существующим телефоном"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_conflict_error
 
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
@@ -54,11 +56,9 @@ class TestAuth:
                         "phone": user_data_1["phone"],
                     },
                 )
-                assert response.status_code == 409
-                data = response.json()
-                assert data["error"] is True
-                assert (
-                    data["message"] == "Пользователь с таким телефоном уже существует"
+                assert_conflict_error(
+                    response=response,
+                    expected_message="Пользователь с таким телефоном уже существует",
                 )
 
             @pytest.mark.asyncio
@@ -67,6 +67,7 @@ class TestAuth:
             ):
                 """Тест запроса регистрации с существующим username"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_conflict_error
 
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
@@ -78,15 +79,16 @@ class TestAuth:
                         "phone": user_data_2["phone"],
                     },
                 )
-                assert response.status_code == 409
-                data = response.json()
-                assert data["error"] is True
-                assert data["message"] == "Пользователь с таким username уже существует"
+                assert_conflict_error(
+                    response=response,
+                    expected_message="Пользователь с таким username уже существует",
+                )
 
             @pytest.mark.asyncio
             async def test_request_registration_without_phone(self, client):
                 """Тест запроса регистрации без указания телефона"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -94,16 +96,13 @@ class TestAuth:
                     self.registration_request_url,
                     json={"username": user_data["username"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                assert_validation_error(response)
 
             @pytest.mark.asyncio
             async def test_request_registration_without_username(self, client):
                 """Тест запроса регистрации без указания username"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -111,11 +110,7 @@ class TestAuth:
                     self.registration_request_url,
                     json={"phone": user_data["phone"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                assert_validation_error(response)
 
         class TestComplete:
             """Тесты подтверждения регистрации"""
@@ -131,6 +126,7 @@ class TestAuth:
                 from src.schemas import TokenResponse
                 from src.crud import UserCRUD
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_success_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -153,8 +149,7 @@ class TestAuth:
                     self.registration_verify_url,
                     json={"code": code, "phone": phone},
                 )
-                assert response.status_code == 200
-                TokenResponse(**response.json())
+                assert_success_response(response=response, response_model=TokenResponse)
 
                 # Проверяем наличие пользователя в БД
                 async for db_session in test_db.create_session():
@@ -173,6 +168,7 @@ class TestAuth:
             ):
                 """Тест запроса подтверждения регистрации, без данных в Redis"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_error_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -180,11 +176,10 @@ class TestAuth:
                     self.registration_verify_url,
                     json={"code": user_data["code"], "phone": user_data["phone"]},
                 )
-                assert response.status_code == 400
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Время действия кода верификации истекло"
+                assert_error_response(
+                    response=response,
+                    expected_message="Время действия кода верификации истекло",
+                )
 
             @pytest.mark.asyncio
             async def test_complete_registration_with_too_many_attempts(
@@ -194,6 +189,7 @@ class TestAuth:
                 from src.core.redis import verification_redis
                 from src.core.config import settings
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_error_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -210,16 +206,13 @@ class TestAuth:
                 for att in range(settings.verification.max_attempts):
                     await verification_redis.increment_attempts(user_data["phone"])
 
-                # Запрос подтверждения
                 response = await client.post(
                     self.registration_verify_url,
                     json={"code": user_data["code"], "phone": user_data["phone"]},
                 )
-                assert response.status_code == 400
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Слишком много попыток"
+                assert_error_response(
+                    response=response, expected_message="Слишком много попыток"
+                )
 
             @pytest.mark.asyncio
             async def test_complete_registration_with_invalid_code(
@@ -228,6 +221,7 @@ class TestAuth:
                 """Тест запроса подтверждения регистрации с неправильным кодом"""
                 from src.core.redis import verification_redis
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_error_response
 
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
@@ -246,10 +240,7 @@ class TestAuth:
                     self.registration_verify_url,
                     json={"code": user_data_2["code"], "phone": user_data_1["phone"]},
                 )
-                assert response.status_code == 400
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
+                assert_error_response(response)
 
                 # Проверка, что попытки увеличились
                 redis_data = await verification_redis.get(user_data_1["phone"])
@@ -266,13 +257,13 @@ class TestAuth:
 
                 from src.core.redis import verification_redis
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis (без данных о пользователе)
                 await verification_redis.save(user_data["phone"], user_data["code"], {})
                 with pytest.raises(ValidationError):
-                    # Запрос подтверждения
                     response = await client.post(
                         self.registration_verify_url,
                         json={
@@ -280,16 +271,13 @@ class TestAuth:
                             "phone": user_data["phone"],
                         },
                     )
-                    assert response.status_code == 422
-                    data = response.json()
-                    assert "error" in data and "message" in data
-                    assert data["error"] is True
-                    assert data["message"] == "Невалидные данные  !!!"
+                    assert_validation_error(response)
 
             @pytest.mark.asyncio
             async def test_complete_registration_without_phone(self, client):
                 """Тест запроса подтверждения регистрации без указания телефона"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -297,16 +285,13 @@ class TestAuth:
                     self.registration_verify_url,
                     json={"code": user_data["code"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                assert_validation_error(response)
 
             @pytest.mark.asyncio
             async def test_complete_registration_without_code(self, client):
                 """Тест запроса подтверждения регистрации без указания кода"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -314,16 +299,13 @@ class TestAuth:
                     self.registration_verify_url,
                     json={"phone": user_data["phone"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                assert_validation_error(response)
 
             @pytest.mark.asyncio
             async def test_complete_registration_with_incorrect_code(self, client):
                 """Тест запроса подтверждения регистрации с некорректным кодом"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -331,11 +313,7 @@ class TestAuth:
                     self.registration_verify_url,
                     json={"code": "", "phone": user_data["phone"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                data = assert_validation_error(response)
                 assert "Код должен состоять из 6 символов" in data["detail"]
 
         @pytest.mark.asyncio
@@ -373,6 +351,7 @@ class TestAuth:
                 from src.schemas import VerificationCodeResponse
                 from src.core.redis import verification_redis
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_success_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -380,9 +359,9 @@ class TestAuth:
                     self.login_request_url,
                     json={"phone": user_data["phone"]},
                 )
-
-                assert response.status_code == 200
-                VerificationCodeResponse(**response.json())
+                assert_success_response(
+                    response=response, response_model=VerificationCodeResponse
+                )
 
                 redis_data = await verification_redis.get(user_data["phone"])
                 assert redis_data is not None
@@ -393,6 +372,7 @@ class TestAuth:
             async def test_request_login_with_not_existing_user(self, client):
                 """Тест запроса входа для несуществующего пользователя"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_not_found_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -400,26 +380,17 @@ class TestAuth:
                     self.login_request_url,
                     json={"phone": user_data["phone"]},
                 )
-
-                assert response.status_code == 404
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Пользователь не найден"
+                assert_not_found_error(
+                    response=response, expected_message="Пользователь не найден"
+                )
 
             @pytest.mark.asyncio
             async def test_request_login_without_phone(self, client):
                 """Тест запроса входа без указания телефона"""
+                from tests.helpers import assert_validation_error
 
-                response = await client.post(
-                    self.login_request_url,
-                    json={},
-                )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                response = await client.post(self.login_request_url, json={})
+                assert_validation_error(response)
 
         class TestComplete:
             """Тесты подтверждения входа"""
@@ -434,6 +405,7 @@ class TestAuth:
                 from src.core.redis import verification_redis
                 from src.schemas import TokenResponse
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_success_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -443,13 +415,12 @@ class TestAuth:
                     user_data["code"],
                     {"username": user_data["username"], "phone": user_data["phone"]},
                 )
-                # Запрос подтверждения
+
                 response = await client.post(
                     self.login_verify_url,
                     json={"code": user_data["code"], "phone": user_data["phone"]},
                 )
-                assert response.status_code == 200
-                TokenResponse(**response.json())
+                assert_success_response(response=response, response_model=TokenResponse)
 
                 # Проверка, что в Redis значение удалено
                 redis_data = await verification_redis.get(user_data["phone"])
@@ -461,6 +432,7 @@ class TestAuth:
             ):
                 """Тест запроса подтверждения входа, без данных в Redis"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_error_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -468,11 +440,10 @@ class TestAuth:
                     self.login_verify_url,
                     json={"code": user_data["code"], "phone": user_data["phone"]},
                 )
-                assert response.status_code == 400
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Время действия кода верификации истекло"
+                assert_error_response(
+                    response=response,
+                    expected_message="Время действия кода верификации истекло",
+                )
 
             @pytest.mark.asyncio
             async def test_complete_login_with_too_many_attempts(
@@ -482,6 +453,7 @@ class TestAuth:
                 from src.core.redis import verification_redis
                 from src.core.config import settings
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_error_response
 
                 user_data = UserDataFactory.user_1()
 
@@ -495,16 +467,13 @@ class TestAuth:
                 for att in range(settings.verification.max_attempts):
                     await verification_redis.increment_attempts(user_data["phone"])
 
-                # Запрос подтверждения
                 response = await client.post(
                     self.login_verify_url,
                     json={"code": user_data["code"], "phone": user_data["phone"]},
                 )
-                assert response.status_code == 400
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Слишком много попыток"
+                assert_error_response(
+                    response=response, expected_message="Слишком много попыток"
+                )
 
             @pytest.mark.asyncio
             async def test_complete_login_with_invalid_code(
@@ -513,6 +482,7 @@ class TestAuth:
                 """Тест запроса подтверждения входа с неправильным кодом"""
                 from src.core.redis import verification_redis
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_error_response
 
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
@@ -531,10 +501,7 @@ class TestAuth:
                     self.login_verify_url,
                     json={"code": user_data_2["code"], "phone": user_data_1["phone"]},
                 )
-                assert response.status_code == 400
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
+                assert_error_response(response)
 
                 # Проверка, что попытки увеличились
                 redis_data = await verification_redis.get(user_data_1["phone"])
@@ -549,27 +516,26 @@ class TestAuth:
                 """Тест запроса подтверждения входа, с пустыми данными о пользователе в Redis"""
                 from src.core.redis import verification_redis
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_not_found_error
 
                 user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis (без данных о пользователе)
                 await verification_redis.save(user_data["phone"], user_data["code"], {})
 
-                # Запрос подтверждения
                 response = await client.post(
                     self.login_verify_url,
                     json={"code": user_data["code"], "phone": user_data["phone"]},
                 )
-                assert response.status_code == 404
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Пользователь не найден"
+                assert_not_found_error(
+                    response=response, expected_message="Пользователь не найден"
+                )
 
             @pytest.mark.asyncio
             async def test_complete_login_without_phone(self, client):
                 """Тест запроса подтверждения входа без указания телефона"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -577,16 +543,13 @@ class TestAuth:
                     self.login_verify_url,
                     json={"code": user_data["code"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                assert_validation_error(response)
 
             @pytest.mark.asyncio
             async def test_complete_login_without_code(self, client):
                 """Тест запроса подтверждения входа без указания кода"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -594,16 +557,13 @@ class TestAuth:
                     self.login_verify_url,
                     json={"phone": user_data["phone"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                assert_validation_error(response)
 
             @pytest.mark.asyncio
             async def test_complete_login_with_incorrect_code(self, client):
                 """Тест запроса подтверждения входа с некорректным кодом"""
                 from tests.fixtures.data import UserDataFactory
+                from tests.helpers import assert_validation_error
 
                 user_data = UserDataFactory.user_1()
 
@@ -611,11 +571,7 @@ class TestAuth:
                     self.login_verify_url,
                     json={"code": "", "phone": user_data["phone"]},
                 )
-                assert response.status_code == 422
-                data = response.json()
-                assert "error" in data and "message" in data
-                assert data["error"] is True
-                assert data["message"] == "Невалидные данные  !!!"
+                data = assert_validation_error(response)
                 assert "Код должен состоять из 6 символов" in data["detail"]
 
         @pytest.mark.asyncio
@@ -646,85 +602,75 @@ class TestAuth:
         async def test_get_new_token_success(self, auth_tokens_user_1, client):
             """Тест на успешное получение нового access токена по refresh"""
             from src.schemas import TokenResponse
+            from tests.helpers import assert_success_response
 
             response = await client.post(
                 self.refresh_token_url, json={"token": auth_tokens_user_1.refresh_token}
             )
-            assert response.status_code == 200
-            data = response.json()
-            assert "access_token" in data and "token_type" in data
-            assert data["token_type"] == "Bearer"
-            TokenResponse(**data)
+            data = assert_success_response(
+                response=response, response_model=TokenResponse
+            )
+            assert data.token_type == "Bearer"
 
         @pytest.mark.asyncio
         async def test_get_new_token_by_access_token(self, auth_tokens_user_1, client):
             """Тест запроса на получение нового access токена по access. Неверный тип токена"""
+            from tests.helpers import assert_unauthorized_error
+
             response = await client.post(
                 self.refresh_token_url, json={"token": auth_tokens_user_1.access_token}
             )
-            assert response.status_code == 401
-            data = response.json()
-            assert "error" in data and "message" in data
-            assert data["error"] is True
-            assert data["message"] == "Неверный тип токена. Ожидался: refresh"
+            assert_unauthorized_error(
+                response=response,
+                expected_message="Неверный тип токена. Ожидался: refresh",
+            )
 
         @pytest.mark.asyncio
         async def test_get_new_token_by_refresh_token_not_existing_user(self, client):
             """Тест запроса на получение нового access токена по refresh, не существующего пользователя"""
-            from src.core.config import settings
-            from src.core.security.tokens import create_jwt_token
-            from src.schemas.enums import TokenType
+            from tests.fixtures.data import UserDataFactory
+            from tests.helpers import assert_not_found_error, create_homemade_jwt_token
 
-            refresh_token = create_jwt_token(
-                type_token=TokenType.REFRESH_TOKEN,
-                payload={"sub": "user-1"},
-                expire_minutes=settings.auth.expire_refresh_token_minutes,
+            user_data = UserDataFactory.user_1()
+
+            refresh_token = create_homemade_jwt_token(
+                username=user_data["username"], is_access=False
             )
             response = await client.post(
                 self.refresh_token_url, json={"token": refresh_token}
             )
-            assert response.status_code == 404
-            data = response.json()
-            assert "error" in data and "message" in data
-            assert data["error"] is True
-            assert data["message"] == "Пользователь не найден"
+            assert_not_found_error(
+                response=response, expected_message="Пользователь не найден"
+            )
 
         @pytest.mark.asyncio
         async def test_get_new_token_by_expired_refresh_token(
             self, created_user_1, client
         ):
             """Тест запроса на получение нового access токена по refresh, истекшему по времени"""
-            from src.core.security.tokens import create_jwt_token
-            from src.schemas.enums import TokenType
             from tests.fixtures.data import UserDataFactory
+            from tests.helpers import (
+                assert_unauthorized_error,
+                create_homemade_jwt_token,
+            )
 
             user_data = UserDataFactory.user_1()
 
-            refresh_token = create_jwt_token(
-                type_token=TokenType.REFRESH_TOKEN,
-                payload={"sub": user_data["username"]},
-                expire_minutes=0,
+            refresh_token = create_homemade_jwt_token(
+                username=user_data["username"], is_access=False, expired=True
             )
-
             response = await client.post(
                 self.refresh_token_url, json={"token": refresh_token}
             )
-            assert response.status_code == 401
-            data = response.json()
-            assert "error" in data and "message" in data
-            assert data["error"] is True
-            assert data["message"] == "Невалидный токен"
+            assert_unauthorized_error(response)
 
         @pytest.mark.asyncio
         async def test_get_new_token_without_refresh_token(self, client):
             """Тест запроса на получение нового access токена, без refresh токена"""
+            from tests.helpers import assert_validation_error
 
             response = await client.post(self.refresh_token_url, json={})
-            assert response.status_code == 422
-            data = response.json()
-            assert "error" in data and "message" in data
-            assert data["error"] is True
-            assert data["message"] == "Невалидные данные  !!!"
+            assert_validation_error(response)
 
     class TestVerifyToken:
         verify_token_url = "/api/v1/auth/verify"
@@ -733,56 +679,53 @@ class TestAuth:
         async def test_verify_token_success(self, auth_tokens_user_1, client):
             """Тест на успешную проверку валидности access токена"""
             from src.schemas import TokenVerifyResponse
+            from tests.helpers import assert_success_response
 
             response = await client.post(
                 self.verify_token_url, json={"token": auth_tokens_user_1.access_token}
             )
-            assert response.status_code == 200
-            data = TokenVerifyResponse(**response.json())
+            data = assert_success_response(
+                response=response, response_model=TokenVerifyResponse
+            )
             assert data.is_verify_token is True
 
         @pytest.mark.asyncio
         async def test_verify_token_by_refresh_token(self, auth_tokens_user_1, client):
             """Тест запроса на проверку валидности access токена по refresh токену (Неверный тип токена)"""
+            from tests.helpers import assert_unauthorized_error
 
             response = await client.post(
                 self.verify_token_url, json={"token": auth_tokens_user_1.refresh_token}
             )
-            assert response.status_code == 401
-            data = response.json()
-            assert "error" in data and "message" in data
-            assert data["error"] is True
-            assert data["message"] == "Неверный тип токена. Ожидался: access"
+            assert_unauthorized_error(
+                response=response,
+                expected_message="Неверный тип токена. Ожидался: access",
+            )
 
         @pytest.mark.asyncio
         async def test_verify_token_by_expired_access_token(self, client):
             """Тест запроса на проверку валидности access токена истекшему по времени"""
-            from src.core.security.tokens import create_jwt_token
-            from src.schemas import TokenVerifyResponse, enums
+            from src.schemas import TokenVerifyResponse
             from tests.fixtures.data import UserDataFactory
+            from tests.helpers import assert_success_response, create_homemade_jwt_token
 
             user_data = UserDataFactory.user_1()
 
-            access_token = create_jwt_token(
-                type_token=enums.TokenType.ACCESS_TOKEN,
-                payload={"sub": user_data["username"]},
-                expire_minutes=0,
+            access_token = create_homemade_jwt_token(
+                username=user_data["username"], expired=True
             )
-
             response = await client.post(
                 self.verify_token_url, json={"token": access_token}
             )
-            assert response.status_code == 200
-            data = TokenVerifyResponse(**response.json())
+            data = assert_success_response(
+                response=response, response_model=TokenVerifyResponse
+            )
             assert data.is_verify_token is False
 
         @pytest.mark.asyncio
         async def test_verify_token_without_access_token(self, client):
             """Тест запроса на проверку валидности access токена, без access токена"""
+            from tests.helpers import assert_validation_error
 
             response = await client.post(self.verify_token_url, json={})
-            assert response.status_code == 422
-            data = response.json()
-            assert "error" in data and "message" in data
-            assert data["error"] is True
-            assert data["message"] == "Невалидные данные  !!!"
+            assert_validation_error(response)
