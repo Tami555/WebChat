@@ -270,3 +270,283 @@ class TestAuth:
                 json={"code": user_data["code"], "phone": user_data["phone"]},
             )
             assert ver.status_code == 200
+
+    class TestLogin:
+        """Тесты входа (авторизации)"""
+
+        class TestRequest:
+            """Тесты запроса на вход"""
+
+            login_request_url = "/api/v1/auth/login"
+
+            @pytest.mark.asyncio
+            async def test_request_login_success(
+                self, redis_connect, created_user_1, client
+            ):
+                """Тест на успешный запрос входа"""
+                from src.schemas import VerificationCodeResponse
+                from src.core.redis import verification_redis
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.login_request_url,
+                    json={"phone": user_data["phone"]},
+                )
+
+                assert response.status_code == 200
+                VerificationCodeResponse(**response.json())
+
+                redis_data = await verification_redis.get(user_data["phone"])
+                assert redis_data is not None
+                assert "data" in redis_data
+                assert redis_data.get("code") == user_data["code"]
+
+            @pytest.mark.asyncio
+            async def test_request_login_with_not_existing_user(self, client):
+                """Тест запроса входа для несуществующего пользователя"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.login_request_url,
+                    json={"phone": user_data["phone"]},
+                )
+
+                assert response.status_code == 404
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Пользователь не найден"
+
+            @pytest.mark.asyncio
+            async def test_request_login_without_phone(self, client):
+                """Тест запроса входа без указания телефона"""
+
+                response = await client.post(
+                    self.login_request_url,
+                    json={},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+
+        class TestComplete:
+            """Тесты подтверждения входа"""
+
+            login_verify_url = "/api/v1/auth/verify-login"
+
+            @pytest.mark.asyncio
+            async def test_complete_login_success(
+                self, redis_connect, created_user_1, client
+            ):
+                """Тест на успешное подтверждение входа"""
+                from src.core.redis import verification_redis
+                from src.schemas import TokenResponse
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                # Сохраняем данные в Redis
+                await verification_redis.save(
+                    user_data["phone"],
+                    user_data["code"],
+                    {"username": user_data["username"], "phone": user_data["phone"]},
+                )
+                # Запрос подтверждения
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"code": user_data["code"], "phone": user_data["phone"]},
+                )
+                assert response.status_code == 200
+                TokenResponse(**response.json())
+
+                # Проверка, что в Redis значение удалено
+                redis_data = await verification_redis.get(user_data["phone"])
+                assert redis_data is None
+
+            @pytest.mark.asyncio
+            async def test_complete_login_without_redis_data(
+                self, redis_connect, created_user_1, client
+            ):
+                """Тест запроса подтверждения входа, без данных в Redis"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"code": user_data["code"], "phone": user_data["phone"]},
+                )
+                assert response.status_code == 400
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Время действия кода верификации истекло"
+
+            @pytest.mark.asyncio
+            async def test_complete_login_with_too_many_attempts(
+                self, redis_connect, created_user_1, client
+            ):
+                """Тест запроса подтверждения входа, с большим количеством попыток"""
+                from src.core.redis import verification_redis
+                from src.core.config import settings
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                # Сохраняем данные в Redis
+                await verification_redis.save(
+                    user_data["phone"],
+                    user_data["code"],
+                    {"username": user_data["username"], "phone": user_data["phone"]},
+                )
+                # Увеличиваем попытки
+                for att in range(settings.verification.max_attempts):
+                    await verification_redis.increment_attempts(user_data["phone"])
+
+                # Запрос подтверждения
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"code": user_data["code"], "phone": user_data["phone"]},
+                )
+                assert response.status_code == 400
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Слишком много попыток"
+
+            @pytest.mark.asyncio
+            async def test_complete_login_with_invalid_code(
+                self, redis_connect, created_user_1, client
+            ):
+                """Тест запроса подтверждения входа с неправильным кодом"""
+                from src.core.redis import verification_redis
+                from tests.fixtures.data import UserDataFactory
+
+                user_data_1 = UserDataFactory.user_1()
+                user_data_2 = UserDataFactory.user_2()
+
+                # Сохраняем данные в Redis
+                await verification_redis.save(
+                    user_data_1["phone"],
+                    user_data_1["code"],
+                    {
+                        "username": user_data_1["username"],
+                        "phone": user_data_1["phone"],
+                    },
+                )
+                # Запрос подтверждения с неверным кодом
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"code": user_data_2["code"], "phone": user_data_1["phone"]},
+                )
+                assert response.status_code == 400
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+
+                # Проверка, что попытки увеличились
+                redis_data = await verification_redis.get(user_data_1["phone"])
+                assert redis_data is not None
+                assert redis_data["code"] == user_data_1["code"]
+                assert int(redis_data["attempts"]) == 1
+
+            @pytest.mark.asyncio
+            async def test_complete_login_with_empty_redis_user_data(
+                self, redis_connect, created_user_1, client
+            ):
+                """Тест запроса подтверждения входа, с пустыми данными о пользователе в Redis"""
+                from src.core.redis import verification_redis
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                # Сохраняем данные в Redis (без данных о пользователе)
+                await verification_redis.save(user_data["phone"], user_data["code"], {})
+
+                # Запрос подтверждения
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"code": user_data["code"], "phone": user_data["phone"]},
+                )
+                assert response.status_code == 404
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Пользователь не найден"
+
+            @pytest.mark.asyncio
+            async def test_complete_login_without_phone(self, client):
+                """Тест запроса подтверждения входа без указания телефона"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"code": user_data["code"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+
+            @pytest.mark.asyncio
+            async def test_complete_login_without_code(self, client):
+                """Тест запроса подтверждения входа без указания кода"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"phone": user_data["phone"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+
+            @pytest.mark.asyncio
+            async def test_complete_login_with_incorrect_code(self, client):
+                """Тест запроса подтверждения входа с некорректным кодом"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.login_verify_url,
+                    json={"code": "", "phone": user_data["phone"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+                assert "Код должен состоять из 6 символов" in data["detail"]
+
+        @pytest.mark.asyncio
+        async def test_full_login_success(self, redis_connect, created_user_1, client):
+            """Тест на полную успешную авторизацию"""
+            from tests.fixtures.data import UserDataFactory
+
+            user_data = UserDataFactory.user_1()
+
+            reg = await client.post(
+                self.TestRequest.login_request_url,
+                json={"phone": user_data["phone"]},
+            )
+            assert reg.status_code == 200
+
+            ver = await client.post(
+                self.TestComplete.login_verify_url,
+                json={"code": user_data["code"], "phone": user_data["phone"]},
+            )
+            assert ver.status_code == 200
