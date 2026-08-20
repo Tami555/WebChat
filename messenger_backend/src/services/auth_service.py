@@ -39,7 +39,7 @@ class AuthService:
         # Отправляем код
         return await VerificationService.create_verification(
             phone=user_data.phone,
-            data={"username": user_data.username, "phone": user_data.phone},
+            data=user_data.model_dump(),
         )
 
     @staticmethod

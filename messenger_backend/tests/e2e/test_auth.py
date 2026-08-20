@@ -83,6 +83,40 @@ class TestAuth:
                 assert data["error"] is True
                 assert data["message"] == "Пользователь с таким username уже существует"
 
+            @pytest.mark.asyncio
+            async def test_request_registration_without_phone(self, client):
+                """Тест запроса регистрации без указания телефона"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.registration_request_url,
+                    json={"username": user_data["username"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+
+            @pytest.mark.asyncio
+            async def test_request_registration_without_username(self, client):
+                """Тест запроса регистрации без указания username"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.registration_request_url,
+                    json={"phone": user_data["phone"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+
         class TestComplete:
             """Тесты подтверждения регистрации"""
 
@@ -224,10 +258,10 @@ class TestAuth:
                 assert int(redis_data["attempts"]) == 1
 
             @pytest.mark.asyncio
-            async def test_complete_registration_without_user_data(
+            async def test_complete_registration_without_redis_user_data(
                 self, redis_connect, client
             ):
-                """Тест запроса подтверждения регистрации, с пустыми данными о пользователе"""
+                """Тест запроса подтверждения регистрации, с пустыми данными о пользователе в Redis"""
                 from pydantic import ValidationError
 
                 from src.core.redis import verification_redis
@@ -252,8 +286,60 @@ class TestAuth:
                     assert data["error"] is True
                     assert data["message"] == "Невалидные данные  !!!"
 
+            @pytest.mark.asyncio
+            async def test_complete_registration_without_phone(self, client):
+                """Тест запроса подтверждения регистрации без указания телефона"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.registration_verify_url,
+                    json={"code": user_data["code"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+
+            @pytest.mark.asyncio
+            async def test_complete_registration_without_code(self, client):
+                """Тест запроса подтверждения регистрации без указания кода"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.registration_verify_url,
+                    json={"phone": user_data["phone"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+
+            @pytest.mark.asyncio
+            async def test_complete_registration_with_incorrect_code(self, client):
+                """Тест запроса подтверждения регистрации с некорректным кодом"""
+                from tests.fixtures.data import UserDataFactory
+
+                user_data = UserDataFactory.user_1()
+
+                response = await client.post(
+                    self.registration_verify_url,
+                    json={"code": "", "phone": user_data["phone"]},
+                )
+                assert response.status_code == 422
+                data = response.json()
+                assert "error" in data and "message" in data
+                assert data["error"] is True
+                assert data["message"] == "Невалидные данные  !!!"
+                assert "Код должен состоять из 6 символов" in data["detail"]
+
         @pytest.mark.asyncio
-        async def test_full_registration_success(self, client):
+        async def test_full_registration_success(self, redis_connect, client):
             """Тест на полную успешную регистрацию"""
             from tests.fixtures.data import UserDataFactory
 
