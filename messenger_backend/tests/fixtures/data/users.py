@@ -24,7 +24,16 @@ class UserDataFactory:
         }
 
     @staticmethod
-    def custom_user(**kwargs) -> Dict[str, Any]:
+    def user_3() -> Dict[str, Any]:
+        return {
+            "username": "anna",
+            "phone": "tel:+7-917-254-19-12",
+            "code": "541912",
+            "last_seen": datetime.now(),
+        }
+
+    @staticmethod
+    def create_user_custom(**kwargs) -> Dict[str, Any]:
         """Создание кастомного пользователя"""
         defaults = {
             "username": "custom_user",

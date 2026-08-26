@@ -1,5 +1,14 @@
 import pytest
-from tests.helpers import url_builder
+
+from src.core.redis import verification_redis
+from src.core.config import settings
+from tests.fixtures.data import UserDataFactory
+from tests.helpers import url_builder, TokenFactory
+from tests.helpers.assertions import (
+    HttpAssertions,
+    VerificationRedisAssertions,
+    UserDatabaseAssertions,
+)
 
 
 class TestAuth:
@@ -17,11 +26,6 @@ class TestAuth:
             async def test_request_registration_success(self, redis_connect, client):
                 """Тест на успешный запрос регистрации"""
                 from src.schemas import VerificationCodeResponse
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import (
-                    HttpAssertions,
-                    VerificationRedisAssertions,
-                )
 
                 user_data = UserDataFactory.user_1()
 
@@ -44,9 +48,6 @@ class TestAuth:
                 self, created_user_1, redis_connect, client
             ):
                 """Тест запроса регистрации с существующим телефоном"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
 
@@ -67,9 +68,6 @@ class TestAuth:
                 self, created_user_1, redis_connect, client
             ):
                 """Тест запроса регистрации с существующим username"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
 
@@ -88,9 +86,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_request_registration_without_phone(self, client):
                 """Тест запроса регистрации без указания телефона"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -102,9 +97,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_request_registration_without_username(self, client):
                 """Тест запроса регистрации без указания username"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -123,14 +115,7 @@ class TestAuth:
                 self, redis_connect, client, test_db
             ):
                 """Тест на успешное подтверждение регистрации и создание пользователя"""
-                from src.core.redis import verification_redis
                 from src.schemas import TokenResponse
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import (
-                    HttpAssertions,
-                    VerificationRedisAssertions,
-                    UserDatabaseAssertions,
-                )
 
                 user_data = UserDataFactory.user_1()
                 # Сохраняем данные в Redis
@@ -165,9 +150,6 @@ class TestAuth:
                 self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации, без данных в Redis"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -184,11 +166,6 @@ class TestAuth:
                 self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации, с большим количеством попыток"""
-                from src.core.redis import verification_redis
-                from src.core.config import settings
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis
@@ -217,13 +194,6 @@ class TestAuth:
                 self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации с неправильным кодом"""
-                from src.core.redis import verification_redis
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import (
-                    HttpAssertions,
-                    VerificationRedisAssertions,
-                )
-
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
 
@@ -255,10 +225,6 @@ class TestAuth:
                 """Тест запроса подтверждения регистрации, с пустыми данными о пользователе в Redis"""
                 from pydantic import ValidationError
 
-                from src.core.redis import verification_redis
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis (без данных о пользователе)
@@ -276,9 +242,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_complete_registration_without_phone(self, client):
                 """Тест запроса подтверждения регистрации без указания телефона"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -290,9 +253,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_complete_registration_without_code(self, client):
                 """Тест запроса подтверждения регистрации без указания кода"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -304,9 +264,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_complete_registration_with_incorrect_code(self, client):
                 """Тест запроса подтверждения регистрации с некорректным кодом"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -319,9 +276,6 @@ class TestAuth:
         @pytest.mark.asyncio
         async def test_full_registration_success(self, redis_connect, client, test_db):
             """Тест на полную успешную регистрацию"""
-            from tests.fixtures.data import UserDataFactory
-            from tests.helpers.assertions import UserDatabaseAssertions
-
             user_data = UserDataFactory.user_1()
 
             reg = await client.post(
@@ -357,11 +311,6 @@ class TestAuth:
             ):
                 """Тест на успешный запрос входа"""
                 from src.schemas import VerificationCodeResponse
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import (
-                    HttpAssertions,
-                    VerificationRedisAssertions,
-                )
 
                 user_data = UserDataFactory.user_1()
 
@@ -379,9 +328,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_request_login_with_not_existing_user(self, client):
                 """Тест запроса входа для несуществующего пользователя"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -395,8 +341,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_request_login_without_phone(self, client):
                 """Тест запроса входа без указания телефона"""
-                from tests.helpers.assertions import HttpAssertions
-
                 response = await client.post(self.login_request_url, json={})
                 HttpAssertions.assert_validation_error(response)
 
@@ -410,13 +354,7 @@ class TestAuth:
                 self, redis_connect, created_user_1, client
             ):
                 """Тест на успешное подтверждение входа"""
-                from src.core.redis import verification_redis
                 from src.schemas import TokenResponse
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import (
-                    HttpAssertions,
-                    VerificationRedisAssertions,
-                )
 
                 user_data = UserDataFactory.user_1()
 
@@ -443,9 +381,6 @@ class TestAuth:
                 self, redis_connect, created_user_1, client
             ):
                 """Тест запроса подтверждения входа, без данных в Redis"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -462,11 +397,6 @@ class TestAuth:
                 self, redis_connect, created_user_1, client
             ):
                 """Тест запроса подтверждения входа, с большим количеством попыток"""
-                from src.core.redis import verification_redis
-                from src.core.config import settings
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis
@@ -492,13 +422,6 @@ class TestAuth:
                 self, redis_connect, created_user_1, client
             ):
                 """Тест запроса подтверждения входа с неправильным кодом"""
-                from src.core.redis import verification_redis
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import (
-                    HttpAssertions,
-                    VerificationRedisAssertions,
-                )
-
                 user_data_1 = UserDataFactory.user_1()
                 user_data_2 = UserDataFactory.user_2()
 
@@ -528,12 +451,7 @@ class TestAuth:
                 self, redis_connect, created_user_1, client
             ):
                 """Тест запроса подтверждения входа, с пустыми данными о пользователе в Redis"""
-                from src.core.redis import verification_redis
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
-
                 # Сохраняем данные в Redis (без данных о пользователе)
                 await verification_redis.save(user_data["phone"], user_data["code"], {})
 
@@ -548,9 +466,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_complete_login_without_phone(self, client):
                 """Тест запроса подтверждения входа без указания телефона"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -562,9 +477,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_complete_login_without_code(self, client):
                 """Тест запроса подтверждения входа без указания кода"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -576,9 +488,6 @@ class TestAuth:
             @pytest.mark.asyncio
             async def test_complete_login_with_incorrect_code(self, client):
                 """Тест запроса подтверждения входа с некорректным кодом"""
-                from tests.fixtures.data import UserDataFactory
-                from tests.helpers.assertions import HttpAssertions
-
                 user_data = UserDataFactory.user_1()
 
                 response = await client.post(
@@ -591,8 +500,6 @@ class TestAuth:
         @pytest.mark.asyncio
         async def test_full_login_success(self, redis_connect, created_user_1, client):
             """Тест на полную успешную авторизацию"""
-            from tests.fixtures.data import UserDataFactory
-
             user_data = UserDataFactory.user_1()
 
             reg = await client.post(
@@ -616,7 +523,6 @@ class TestAuth:
         async def test_get_new_token_success(self, auth_tokens_user_1, client):
             """Тест на успешное получение нового access токена по refresh"""
             from src.schemas import TokenResponse
-            from tests.helpers.assertions import HttpAssertions
 
             response = await client.post(
                 self.refresh_token_url, json={"token": auth_tokens_user_1.refresh_token}
@@ -629,8 +535,6 @@ class TestAuth:
         @pytest.mark.asyncio
         async def test_get_new_token_by_access_token(self, auth_tokens_user_1, client):
             """Тест запроса на получение нового access токена по access. Неверный тип токена"""
-            from tests.helpers.assertions import HttpAssertions
-
             response = await client.post(
                 self.refresh_token_url, json={"token": auth_tokens_user_1.access_token}
             )
@@ -642,10 +546,6 @@ class TestAuth:
         @pytest.mark.asyncio
         async def test_get_new_token_by_refresh_token_not_existing_user(self, client):
             """Тест запроса на получение нового access токена по refresh, не существующего пользователя"""
-            from tests.fixtures.data import UserDataFactory
-            from tests.helpers import TokenFactory
-            from tests.helpers.assertions import HttpAssertions
-
             user_data = UserDataFactory.user_1()
 
             TokenFactory.create_refresh_token(username=user_data["username"])
@@ -664,10 +564,6 @@ class TestAuth:
             self, created_user_1, client
         ):
             """Тест запроса на получение нового access токена по refresh, истекшему по времени"""
-            from tests.fixtures.data import UserDataFactory
-            from tests.helpers import TokenFactory
-            from tests.helpers.assertions import HttpAssertions
-
             user_data = UserDataFactory.user_1()
 
             refresh_token = TokenFactory.create_expired_refresh_token(
@@ -681,8 +577,6 @@ class TestAuth:
         @pytest.mark.asyncio
         async def test_get_new_token_without_refresh_token(self, client):
             """Тест запроса на получение нового access токена, без refresh токена"""
-            from tests.helpers.assertions import HttpAssertions
-
             response = await client.post(self.refresh_token_url, json={})
             HttpAssertions.assert_validation_error(response)
 
@@ -693,7 +587,6 @@ class TestAuth:
         async def test_verify_token_success(self, auth_tokens_user_1, client):
             """Тест на успешную проверку валидности access токена"""
             from src.schemas import TokenVerifyResponse
-            from tests.helpers.assertions import HttpAssertions
 
             response = await client.post(
                 self.verify_token_url, json={"token": auth_tokens_user_1.access_token}
@@ -706,8 +599,6 @@ class TestAuth:
         @pytest.mark.asyncio
         async def test_verify_token_by_refresh_token(self, auth_tokens_user_1, client):
             """Тест запроса на проверку валидности access токена по refresh токену (Неверный тип токена)"""
-            from tests.helpers.assertions import HttpAssertions
-
             response = await client.post(
                 self.verify_token_url, json={"token": auth_tokens_user_1.refresh_token}
             )
@@ -720,9 +611,6 @@ class TestAuth:
         async def test_verify_token_by_expired_access_token(self, client):
             """Тест запроса на проверку валидности access токена истекшему по времени"""
             from src.schemas import TokenVerifyResponse
-            from tests.fixtures.data import UserDataFactory
-            from tests.helpers import TokenFactory
-            from tests.helpers.assertions import HttpAssertions
 
             user_data = UserDataFactory.user_1()
 
@@ -740,7 +628,5 @@ class TestAuth:
         @pytest.mark.asyncio
         async def test_verify_token_without_access_token(self, client):
             """Тест запроса на проверку валидности access токена, без access токена"""
-            from tests.helpers.assertions import HttpAssertions
-
             response = await client.post(self.verify_token_url, json={})
             HttpAssertions.assert_validation_error(response)
