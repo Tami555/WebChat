@@ -17,3 +17,19 @@ class StickerResponse(ShortStickerResponse):
     file_url: str
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class CreateStickerRequest(BaseModel):
+    """Схема создания стикера"""
+
+    name: str
+    file_url: str
+    emoji: str
+    pack_id: UUID
+
+
+class CreateStickerPackRequest(BaseModel):
+    """Схема создания СтикерПака"""
+
+    name: str
+    is_premium: bool = False

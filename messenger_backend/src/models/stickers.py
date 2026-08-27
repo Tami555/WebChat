@@ -1,3 +1,4 @@
+from uuid import UUID
 from typing import TYPE_CHECKING
 from sqlalchemy import String, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -16,7 +17,7 @@ class Stickers(UUIDPrimaryKey, Base):
     name: Mapped[str] = mapped_column(String(100))
     file_url: Mapped[str]
     emoji: Mapped[str] = mapped_column(String(5), default="⭐")
-    pack_id: Mapped[int] = mapped_column(
+    pack_id: Mapped[UUID] = mapped_column(
         ForeignKey("sticker_packs.id", ondelete="CASCADE")
     )
     # Отношения

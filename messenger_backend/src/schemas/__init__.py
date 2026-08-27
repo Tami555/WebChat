@@ -25,6 +25,8 @@ __all__ = (
     "DialogDetailResponse",
     "ShortStickerResponse",
     "StickerResponse",
+    "CreateStickerRequest",
+    "CreateStickerPackRequest",
     "WebSocketMessageRequest",
     "JoinChatMessageRequest",
     "LeaveChatMessageRequest",
@@ -58,7 +60,12 @@ from .messages import (
 from .chats import ChatResponse, AllChatsResponse
 from .groups import CreateGroupRequest, GroupResponse, CreateGroupWithMembersRequest
 from .dialogs import CreateDialogRequest, DialogDetailResponse
-from .sticker import ShortStickerResponse, StickerResponse
+from .sticker import (
+    ShortStickerResponse,
+    StickerResponse,
+    CreateStickerRequest,
+    CreateStickerPackRequest,
+)
 from .websocket import (
     WebSocketMessageRequest,
     JoinChatMessageRequest,
