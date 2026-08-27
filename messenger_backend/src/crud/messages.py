@@ -1,6 +1,6 @@
 import datetime
 from typing import Iterable
-from sqlalchemy import select, func, update
+from sqlalchemy import select, func, update, desc
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -56,7 +56,7 @@ class MessageCRUD:
                 joinedload(Messages.sticker),
             )
             .limit(limit * page)
-            .order_by(Messages.created_at)
+            .order_by(desc(Messages.created_at))
             .offset((page - 1) * limit)
         )
         messages = await session.scalars(stmt)
@@ -150,3 +150,12 @@ class MessageCRUD:
         if statuses:
             session.add_all(statuses)
             await session.commit()
+
+    @staticmethod
+    async def get_message_statuses(
+        message_id: UUID, session: AsyncSession
+    ) -> list[MessageStatuses]:
+        """Получение статусов чтения сообщения по его id"""
+        stmt = select(MessageStatuses).where(MessageStatuses.message_id == message_id)
+        statuses = await session.scalars(stmt)
+        return list(statuses)

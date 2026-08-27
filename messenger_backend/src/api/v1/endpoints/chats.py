@@ -33,8 +33,8 @@ async def get_user_chats(
 async def get_chat_messages(
     chat_id: UUID,
     chat_type: Annotated[ChatType, Query],
-    page: Annotated[int, Query] = 1,
-    limit: Annotated[int, Query] = 50,
+    page: Annotated[int, Query(gt=0)] = 1,
+    limit: Annotated[int, Query(gt=0)] = 50,
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):

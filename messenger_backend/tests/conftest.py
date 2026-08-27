@@ -208,12 +208,31 @@ async def created_group_user1_user2_user3(
         return group
 
 
+@pytest.fixture
+async def created_group_user1_user3(test_db, created_user_1, created_user_3):
+    """Создает группу с пользователем 1 (админ) и участником 3"""
+    from src.crud.groups import GroupCRUD
+    from tests.fixtures.data import GroupsDataFactory
+
+    group_data = GroupsDataFactory.group_data()
+    group_data["created_by"] = created_user_1.id
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[created_user_3.id],
+            session=session,
+        )
+        return group
+
+
 # ФИКСТУРЫ ДЛЯ СООБЩЕНИЙ
 @pytest.fixture
 async def created_message_in_dialog_1_2(
     test_db, created_user_1, created_dialog_user1_user2
 ):
-    """Создает сообщение в диалоге пользователей 1 и 2. Сообщение от 1-го к 2-му"""
+    """Создает сообщение в диалоге, от 1-го пользователя ко 2-му"""
     from src.crud import MessageCRUD, DialogCRUD
     from src.models.messages import Messages
     from tests.fixtures.data import MessagesDataFactory
@@ -257,6 +276,83 @@ async def created_message_in_group_1_2_3(
             created_group_user1_user2_user3, created_message, session
         )
         return created_message
+
+
+@pytest.fixture
+async def created_multiple_messages_in_dialog_1_2(
+    test_db,
+    created_user_1,
+    created_user_2,
+    created_dialog_user1_user2,
+):
+    """Создает 3 сообщения в диалоге от 1-го пользователя ко 2-му (все непрочитанные)"""
+    from src.crud import MessageCRUD, DialogCRUD
+    from src.models.messages import Messages
+    from tests.fixtures.data import MessagesDataFactory
+    from datetime import datetime
+
+    messages = []
+    async for session in test_db.create_session():
+        for i in range(3):
+            message_data = MessagesDataFactory.message_data(
+                content=f"Message {i + 1} from user 1 to user 2!"
+            )
+            message = Messages(
+                sender_id=created_user_1.id,
+                dialog_id=created_dialog_user1_user2.id,
+                **message_data,
+            )
+            created_message = await MessageCRUD.create_message(message, session)
+            messages.append(created_message)
+
+            await MessageCRUD.create_message_statuses(
+                message=created_message,
+                read_users_ids=[],
+                not_read_users_ids=[created_user_2.id],
+                read_at=datetime.now(),
+                session=session,
+            )
+        await DialogCRUD.set_last_message(
+            created_dialog_user1_user2, messages[-1], session
+        )
+    return messages
+
+
+@pytest.fixture
+async def created_multiple_messages_in_group_1_2_3(
+    test_db, created_user_1, created_user_2, created_group_user1_user2_user3
+):
+    """Создает 3 сообщения в группе от 1-го пользователя (все непрочитанные)"""
+    from src.crud import MessageCRUD, GroupCRUD
+    from src.models.messages import Messages
+    from tests.fixtures.data import MessagesDataFactory
+    from datetime import datetime
+
+    messages = []
+    async for session in test_db.create_session():
+        for i in range(3):
+            message_data = MessagesDataFactory.message_data(
+                content=f"Group message {i+1}!"
+            )
+            message = Messages(
+                sender_id=created_user_1.id,
+                group_id=created_group_user1_user2_user3.id,
+                **message_data,
+            )
+            created_message = await MessageCRUD.create_message(message, session)
+            messages.append(created_message)
+
+            await MessageCRUD.create_message_statuses(
+                message=created_message,
+                read_users_ids=[],
+                not_read_users_ids=[created_user_2.id],
+                read_at=datetime.now(),
+                session=session,
+            )
+        await GroupCRUD.set_last_message(
+            created_group_user1_user2_user3, messages[-1], session
+        )
+    return messages
 
 
 # ФИКСТУРЫ ДЛЯ СТАТУСОВ СООБЩЕНИЙ

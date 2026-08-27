@@ -29,11 +29,17 @@ class HttpAssertions:
         response: Response,
         response_model: T,
         expected_status: int = 200,
-    ) -> Optional[T]:
+        is_list: bool = False,
+    ) -> Optional[T] | list[T]:
         """Проверка успешного ответа. Преобразование в модель ответа"""
         assert response.status_code == expected_status
-        data = response_model(**response.json())
-        return data
+        data = response.json()
+        if is_list:
+            list_data = []
+            for i in data:
+                list_data.append(response_model(**i))
+            return list_data
+        return response_model(**data)
 
     @staticmethod
     def assert_validation_error(
