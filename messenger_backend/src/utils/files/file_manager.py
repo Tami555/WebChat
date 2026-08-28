@@ -1,11 +1,10 @@
 from abc import abstractmethod, ABC
-from uuid import uuid5, uuid4
 from pathlib import Path
 from fastapi import UploadFile
 import aiofiles
 
 from src.core.config import settings
-from src.schemas import SaveMessageFileRequest
+from .file_helper import FilePathHelper
 
 
 class FileManager(ABC):
@@ -14,7 +13,7 @@ class FileManager(ABC):
     @staticmethod
     @abstractmethod
     async def save_file(
-        data: SaveMessageFileRequest,
+        file_path: Path,
         file: UploadFile,
     ) -> str:
         raise NotImplementedError()
@@ -25,24 +24,18 @@ class LocalFileManager(FileManager):
 
     @staticmethod
     async def save_file(
-        data: SaveMessageFileRequest,
+        file_path: Path,
         file: UploadFile,
     ) -> str:
-        USER_FILE_KEY = uuid5(uuid5(uuid4(), file.filename), data.username)
-        BASE_PATH = Path(__file__).parent.parent.parent.parent
-        FILES_PATH = BASE_PATH / "user_files" / "chats"
-        USER_FILE_PATH = (
-            FILES_PATH
-            / str(data.chat_id)
-            / data.file_type
-            / f"{USER_FILE_KEY}_{file.filename}"
-        )
-        USER_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+        save_file_path = FilePathHelper.get_local_base_media_dir() / file_path
+        FilePathHelper.ensure_directory_exists(save_file_path)
+
         # Сохраняем файл по 1 мб
-        async with aiofiles.open(USER_FILE_PATH, "wb") as f:
+        async with aiofiles.open(save_file_path, "wb") as f:
             while chunk := await file.read(1024 * 1024):
                 await f.write(chunk)
-        return str(USER_FILE_PATH)
+        return str(save_file_path)
 
 
 class S3FileManager(FileManager):

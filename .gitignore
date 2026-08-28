@@ -4,6 +4,8 @@
 __pycache__/
 instance/
 .webassets-cache
+media/
+test_media/
 user_files/
 
 # PostgreSQL

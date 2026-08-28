@@ -3,7 +3,7 @@ from fastapi import UploadFile
 
 from src.schemas import UploadMessageFileRequest, SaveMessageFileRequest
 from src.models import Users
-from src.utils.files import determining_file_type, get_file_manager
+from src.utils.files import determining_file_type, get_file_manager, FilePathHelper
 from src.exceptions import NotCorrectMessageTypeForFileTypeError
 from src.services import MessageService
 
@@ -36,12 +36,14 @@ class FileService:
 
         # Сохраняем файл
         file_manager = get_file_manager()
+        file_path = FilePathHelper.generate_message_file_path(
+            chat_id=upload_data.chat_id,
+            file_type=upload_data.file_type,
+            username=user.username,
+            filename=upload_file.filename,
+        )
         save_file_url = await file_manager.save_file(
-            data=SaveMessageFileRequest(
-                chat_id=upload_data.chat_id,
-                file_type=upload_data.file_type,
-                username=user.username,
-            ),
+            file_path=file_path,
             file=upload_file,
         )
         return save_file_url

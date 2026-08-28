@@ -1,5 +1,4 @@
-import uuid
-from uuid import UUID
+from uuid import UUID, uuid4
 import pytest
 
 from src.schemas.enums import ChatType, MessageType
@@ -695,8 +694,7 @@ class TestChats:
                 auth_client_user_1,
             ):
                 """Тест: получение сообщений из несуществующего чата"""
-                uuid.uuid4()
-                get_messages_url = TestChats.get_messages_url(uuid.uuid4())
+                get_messages_url = TestChats.get_messages_url(uuid4())
                 response = await auth_client_user_1.get(
                     get_messages_url, params={"chat_type": ChatType.DIALOGS}
                 )
@@ -1110,7 +1108,7 @@ class TestChats:
                     auth_client_user_1,
                 ):
                     """Тест: создание сообщения в несуществующем чате"""
-                    chat_id = uuid.uuid4()
+                    chat_id = uuid4()
                     data = MessagesDataFactory.create_message_data(
                         chat_type=ChatType.DIALOGS, chat_id=str(chat_id)
                     )
@@ -1204,7 +1202,7 @@ class TestChats:
                     data = MessagesDataFactory.create_message_data(
                         chat_type=ChatType.DIALOGS,
                         chat_id=str(chat_id),
-                        reply_message_id=str(uuid.uuid4()),
+                        reply_message_id=str(uuid4()),
                     )
                     response = await auth_client_user_1.post(
                         TestChats.create_message_url,
@@ -1228,7 +1226,7 @@ class TestChats:
                         chat_type=ChatType.DIALOGS,
                         chat_id=str(chat_id),
                         message_type=MessageType.STICKER,
-                        sticker_id=str(uuid.uuid4()),
+                        sticker_id=str(uuid4()),
                     )
                     response = await auth_client_user_1.post(
                         TestChats.create_message_url,
@@ -1312,7 +1310,7 @@ class TestChats:
 
                     # Проверяем, что файл сохранен и удаляем его
                     assert Path(str(message.file_url)).exists()
-                    FileFactory.cleanup_test_files(chat_id)
+                    FileFactory.cleanup_test_messages_files(chat_id)
 
             @pytest.mark.asyncio
             async def test_create_image_message_with_file_success(
@@ -1357,7 +1355,7 @@ class TestChats:
 
                     # Проверяем, что файл сохранен и удаляем его
                     assert Path(str(message.file_url)).exists()
-                    FileFactory.cleanup_test_files(chat_id)
+                    FileFactory.cleanup_test_messages_files(chat_id)
 
             @pytest.mark.asyncio
             async def test_create_voice_message_with_file_success(
@@ -1403,7 +1401,7 @@ class TestChats:
 
                     # Проверяем, что файл сохранен и удаляем его
                     assert Path(str(message.file_url)).exists()
-                    FileFactory.cleanup_test_files(chat_id)
+                    FileFactory.cleanup_test_messages_files(chat_id)
 
             @pytest.mark.asyncio
             async def test_create_text_message_with_file_wrong_type(

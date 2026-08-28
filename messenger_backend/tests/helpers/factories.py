@@ -63,12 +63,12 @@ class FileFactory:
         return content_types.get(suffix, "application/octet-stream")
 
     @staticmethod
-    def cleanup_test_files(chat_id: UUID):
+    def cleanup_test_messages_files(chat_id: UUID):
         """Удаляет тестовые файлы после тестов"""
         import shutil
         from pathlib import Path
 
-        BASE_PATH = Path(__file__).parent.parent.parent
+        BASE_PATH = Path(__file__).parent.parent.parent / "test_media"
         FILES_PATH = BASE_PATH / "user_files" / "chats" / str(chat_id)
 
         if FILES_PATH.exists():
