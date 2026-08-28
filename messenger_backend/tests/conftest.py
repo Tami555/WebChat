@@ -430,3 +430,86 @@ async def created_not_read_message_statuses_in_group_1_2_3(
             session=session,
         )
         return created_message_in_group_1_2_3
+
+
+# ФИКСТУРЫ ДЛЯ СТИКЕРОВ
+@pytest.fixture
+async def created_sticker_pack(test_db):
+    """Создает стикерпак"""
+    from src.crud import StickerCRUD
+    from src.schemas import CreateStickerPackRequest
+    from tests.fixtures.data import StickerDataFactory
+
+    pack_data = StickerDataFactory.sticker_pack_data()
+    async for session in test_db.create_session():
+        pack = await StickerCRUD.create_sticker_pack(
+            CreateStickerPackRequest(**pack_data), session
+        )
+        return pack
+
+
+@pytest.fixture
+async def created_sticker(test_db, created_sticker_pack):
+    """Создает стикер"""
+    from src.crud.stickers import StickerCRUD
+    from src.schemas import CreateStickerRequest
+    from tests.fixtures.data.stickers import StickerDataFactory
+
+    sticker_data = StickerDataFactory.sticker_data()
+    sticker_data["pack_id"] = created_sticker_pack.id
+    async for session in test_db.create_session():
+        sticker = await StickerCRUD.create_sticker(
+            CreateStickerRequest(**sticker_data), session
+        )
+        return sticker
+
+
+# ФИКСТУРЫ ДЛЯ ТЕСТОВЫХ ФАЙЛОВ
+@pytest.fixture
+def test_text_file():
+    """Создает временный текстовый файл для тестов"""
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False) as f:
+        f.write("Test file content for message")
+        file_path = Path(f.name)
+
+    yield file_path
+
+    # Удаляем после теста
+    if file_path.exists():
+        file_path.unlink()
+
+
+@pytest.fixture
+def test_image_file():
+    """Создает временный image-файл для тестов"""
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg", delete=False) as f:
+        # Записываем простой заглушечный jpg
+        f.write(b"\xff\xd8\xff\xdb\x00\x00\x00\x00\xff\xd9")
+        file_path = Path(f.name)
+
+    yield file_path
+
+    if file_path.exists():
+        file_path.unlink()
+
+
+@pytest.fixture
+def test_audio_file():
+    """Создает временный audio-файл для тестов"""
+    import tempfile
+    from pathlib import Path
+
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp3", delete=False) as f:
+        f.write(b"\xff\xfb\x90\x00\x00\x00\x00\x00")
+        file_path = Path(f.name)
+
+    yield file_path
+
+    if file_path.exists():
+        file_path.unlink()

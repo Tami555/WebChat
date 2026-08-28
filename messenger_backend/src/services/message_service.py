@@ -116,13 +116,12 @@ class MessageService:
                 raise MissedDataForMessageTypeError(msg_type, ("message_file",))
 
         # Проверка существования сообщения ответа
-        if (
-            message_data.reply_message_id is not None
-            and await MessageCRUD.get_message_by_id(
+        if message_data.reply_message_id is not None:
+            reply_message = await MessageCRUD.get_message_by_id(
                 message_data.reply_message_id, session
             )
-        ):
-            raise MessageNotFoundError()
+            if reply_message is None:
+                raise MessageNotFoundError()
 
         # Проверка существования стикера
         if message_data.message_type is MessageType.STICKER:
