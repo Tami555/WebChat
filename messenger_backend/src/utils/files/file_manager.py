@@ -26,6 +26,14 @@ class FileManager(ABC):
         """Скачивает файл"""
         raise NotImplementedError()
 
+    @staticmethod
+    @abstractmethod
+    async def delete_file(
+        file_path: Path,
+    ) -> bool:
+        """Удаляет файл"""
+        raise NotImplementedError()
+
 
 class LocalFileManager(FileManager):
     """Работа с файлами происходит на локальном диске"""
@@ -35,7 +43,7 @@ class LocalFileManager(FileManager):
         file_path: Path,
         file: UploadFile,
     ) -> str:
-        """Сохранение файла на локалке"""
+        """Сохранение файла на локальный диск"""
         save_file_path = FilePathHelper.get_local_base_media_dir() / file_path
         FilePathHelper.ensure_directory_exists(save_file_path)
 
@@ -47,7 +55,7 @@ class LocalFileManager(FileManager):
 
     @staticmethod
     async def download_file(file_path: Path) -> tuple[bytes, str, str]:
-        """Скачивание файла с локалки"""
+        """Скачивание файла с локального диска"""
         full_path = FilePathHelper.get_local_base_media_dir() / file_path
         if not full_path.exists():
             raise FilePathNotFoundError()
@@ -55,22 +63,42 @@ class LocalFileManager(FileManager):
         filename = FilePathHelper.extract_filename_from_message_file_path(full_path)
         content_type = get_content_type_by_extension(full_path.suffix)
 
+        # читаем файл
         async with aiofiles.open(full_path, "rb") as f:
             content = await f.read()
 
         return content, content_type, filename
 
+    @staticmethod
+    async def delete_file(file_path: Path) -> bool:
+        """Удаляет файл с локального диска"""
+        full_path = FilePathHelper.get_local_base_media_dir() / file_path
+
+        if not full_path.exists():
+            return False
+
+        # удаляем файл
+        full_path.unlink()
+        return True
+
 
 class S3FileManager(FileManager):
     """Работа с файлами в S3 хранилище"""
 
-    # TODO: Реальная загрузка через S3
+    # TODO: Реальная работа через S3
     @staticmethod
     async def save_file(*args, **kwargs) -> str:
+        """Сохраняет файл в S3"""
         pass
 
     @staticmethod
     async def download_file(file_path: Path) -> tuple[bytes, str, str]:
+        """Скачивает файл из S3"""
+        pass
+
+    @staticmethod
+    async def delete_file(file_path: Path) -> bool:
+        """Удаляет файл из S3"""
         pass
 
 

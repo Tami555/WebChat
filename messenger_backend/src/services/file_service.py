@@ -2,7 +2,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile
 from pathlib import Path
 
-from src.schemas import UploadMessageFileRequest, DownloadMessageFileRequest
+from src.schemas import (
+    UploadMessageFileRequest,
+    DownloadMessageFileRequest,
+    DeleteMessageFileRequest,
+)
 from src.models import Users
 from src.utils.files import get_file_type_for_message, get_file_manager, FilePathHelper
 from src.exceptions import NotCorrectMessageTypeForFileTypeError
@@ -68,3 +72,22 @@ class FileService:
         file_path = Path(download_data.file_path)
 
         return await file_manager.download_file(file_path)
+
+    @staticmethod
+    async def delete_message_file(
+        delete_data: DeleteMessageFileRequest,
+        user: Users,
+        session: AsyncSession,
+    ) -> bool:
+        """Удаление файла сообщения"""
+        # Проверка, что пользователь является участником чата
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=delete_data.chat_id,
+            chat_type=delete_data.chat_type,
+            session=session,
+        )
+        # Удаляем файл
+        file_manager = get_file_manager()
+        file_path = Path(delete_data.file_path)
+        return await file_manager.delete_file(file_path)

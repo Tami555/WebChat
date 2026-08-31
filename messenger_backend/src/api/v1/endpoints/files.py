@@ -4,7 +4,11 @@ from fastapi import APIRouter, Depends, UploadFile, Response
 from src.api.v1.dependencies import get_current_user
 from src.core.database import database_helper
 from src.models import Users
-from src.schemas import UploadMessageFileRequest, DownloadMessageFileRequest
+from src.schemas import (
+    UploadMessageFileRequest,
+    DownloadMessageFileRequest,
+    DeleteMessageFileRequest,
+)
 from src.services import FileService
 
 router = APIRouter()
@@ -47,3 +51,18 @@ async def download_message_file(
         media_type=content_type,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.delete("/messages/delete_file")
+async def delete_message_file(
+    delete_data: DeleteMessageFileRequest,
+    user: Users = Depends(get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Удаление файла сообщения"""
+    deleted = await FileService.delete_message_file(
+        delete_data=delete_data,
+        user=user,
+        session=session,
+    )
+    return {"deleted": deleted}
