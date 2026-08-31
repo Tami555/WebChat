@@ -1,5 +1,6 @@
-from uuid import UUID, uuid4
 import pytest
+from uuid import UUID, uuid4
+from pathlib import Path
 
 from src.schemas.enums import ChatType, MessageType
 from tests.helpers.assertions import (
@@ -1267,6 +1268,8 @@ class TestChats:
         class TestWithFile:
             """Тесты создания сообщения с файлом"""
 
+            base_path = Path(__file__).parent.parent.parent / "test_media"
+
             @pytest.mark.asyncio
             async def test_create_file_message_with_file_success(
                 self,
@@ -1277,10 +1280,6 @@ class TestChats:
                 test_db,
             ):
                 """Тест: создание сообщения с типом FILE и файлом text/plain"""
-                from src.crud.messages import MessageCRUD
-                import shutil
-                from pathlib import Path
-
                 chat_id = created_dialog_user1_user2.id
                 data = MessagesDataFactory.create_message_data(
                     chat_type=ChatType.DIALOGS,
@@ -1309,7 +1308,7 @@ class TestChats:
                     assert message.file_url is not None
 
                     # Проверяем, что файл сохранен и удаляем его
-                    assert Path(str(message.file_url)).exists()
+                    assert (self.base_path / Path(str(message.file_url))).exists()
                     FileFactory.cleanup_test_messages_files(chat_id)
 
             @pytest.mark.asyncio
@@ -1322,10 +1321,6 @@ class TestChats:
                 test_db,
             ):
                 """Тест: создание сообщения с типом IMAGE и файлом image/jpg"""
-                from src.crud.messages import MessageCRUD
-                import shutil
-                from pathlib import Path
-
                 chat_id = created_dialog_user1_user2.id
 
                 data = MessagesDataFactory.create_message_data(
@@ -1354,7 +1349,7 @@ class TestChats:
                     assert message.file_url is not None
 
                     # Проверяем, что файл сохранен и удаляем его
-                    assert Path(str(message.file_url)).exists()
+                    assert (self.base_path / Path(str(message.file_url))).exists()
                     FileFactory.cleanup_test_messages_files(chat_id)
 
             @pytest.mark.asyncio
@@ -1367,10 +1362,6 @@ class TestChats:
                 test_db,
             ):
                 """Тест: создание сообщения с типом VOICE и файлом audio/mpeg"""
-                from src.crud.messages import MessageCRUD
-                import shutil
-                from pathlib import Path
-
                 chat_id = created_dialog_user1_user2.id
                 data = MessagesDataFactory.create_message_data(
                     chat_type=ChatType.DIALOGS,
@@ -1400,7 +1391,7 @@ class TestChats:
                     assert message.file_url is not None
 
                     # Проверяем, что файл сохранен и удаляем его
-                    assert Path(str(message.file_url)).exists()
+                    assert (self.base_path / Path(str(message.file_url))).exists()
                     FileFactory.cleanup_test_messages_files(chat_id)
 
             @pytest.mark.asyncio
