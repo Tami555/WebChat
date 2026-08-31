@@ -1,9 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import UploadFile
+from pathlib import Path
 
-from src.schemas import UploadMessageFileRequest, SaveMessageFileRequest
+from src.schemas import UploadMessageFileRequest, DownloadMessageFileRequest
 from src.models import Users
-from src.utils.files import determining_file_type, get_file_manager, FilePathHelper
+from src.utils.files import get_file_type_for_message, get_file_manager, FilePathHelper
 from src.exceptions import NotCorrectMessageTypeForFileTypeError
 from src.services import MessageService
 
@@ -28,7 +29,7 @@ class FileService:
         )
 
         # Проверка на тип сообщения и тип файла
-        real_file_type = determining_file_type(upload_file.content_type)
+        real_file_type = get_file_type_for_message(upload_file.content_type)
         if real_file_type != upload_data.file_type:
             raise NotCorrectMessageTypeForFileTypeError(
                 upload_data.file_type, upload_file.content_type
@@ -47,3 +48,23 @@ class FileService:
             file=upload_file,
         )
         return save_file_url
+
+    @staticmethod
+    async def download_message_file(
+        download_data: DownloadMessageFileRequest,
+        user: Users,
+        session: AsyncSession,
+    ) -> tuple[bytes, str, str]:
+        """Скачивание файла сообщения (содержимое файла, content_type, имя_файла)"""
+        # Проверка, что пользователь является участником чата
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=download_data.chat_id,
+            chat_type=download_data.chat_type,
+            session=session,
+        )
+        # Скачиваем файл
+        file_manager = get_file_manager()
+        file_path = Path(download_data.file_path)
+
+        return await file_manager.download_file(file_path)

@@ -75,22 +75,3 @@ async def create_message(
         user=user, session=session, message_data=message_data
     )
     return {"status": "created", "message_id": new_message.id}
-
-
-@router.post("/messages/upload_file")
-async def upload_message_file(
-    upload_file: UploadFile,
-    upload_data: UploadMessageFileRequest = Depends(
-        UploadMessageFileRequest.upload_message_file_by_form
-    ),
-    user: Users = Depends(dependencies.get_current_user),
-    session: AsyncSession = Depends(database_helper.create_scoped_session),
-):
-    """Загрузка файла сообщения"""
-    save_file_url = await FileService.upload_message_file(
-        upload_data=upload_data,
-        upload_file=upload_file,
-        user=user,
-        session=session,
-    )
-    return {"file_url": save_file_url}

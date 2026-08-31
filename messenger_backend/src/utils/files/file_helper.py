@@ -30,6 +30,13 @@ class FilePathHelper:
         return file_path
 
     @staticmethod
+    def extract_filename_from_message_file_path(file_path: Path) -> str:
+        """Извлекает имя файла из полного пути файла сообщения"""
+        filename = Path(file_path).name
+        artifacts = str(filename).split("_")
+        return "".join(artifacts[1:])
+
+    @staticmethod
     def generate_sticker_file_path(
         sticker_id: UUID,
         pack_id: UUID,
@@ -78,7 +85,7 @@ class FilePathHelper:
         )
 
 
-def determining_file_type(file_content_type: str) -> MessageType | None:
+def get_file_type_for_message(file_content_type: str) -> MessageType | None:
     """Определяет тип файла для сообщения"""
     content_type = file_content_type.strip().split("/")[0]
     match content_type:
@@ -93,3 +100,25 @@ def determining_file_type(file_content_type: str) -> MessageType | None:
 
         case _:
             return None
+
+
+def get_content_type_by_extension(extension: str) -> str:
+    """Возвращает MIME-тип по расширению файла"""
+    content_types = {
+        ".txt": "text/plain",
+        ".jpg": "image/jpeg",
+        ".jpeg": "image/jpeg",
+        ".png": "image/png",
+        ".gif": "image/gif",
+        ".mp3": "audio/mpeg",
+        ".wav": "audio/wav",
+        ".mp4": "video/mp4",
+        ".pdf": "application/pdf",
+        ".doc": "application/msword",
+        ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        ".xls": "application/vnd.ms-excel",
+        ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        ".zip": "application/zip",
+        ".rar": "application/x-rar-compressed",
+    }
+    return content_types.get(extension.lower(), "application/octet-stream")

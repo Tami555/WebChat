@@ -4,7 +4,8 @@ from fastapi import UploadFile
 import aiofiles
 
 from src.core.config import settings
-from .file_helper import FilePathHelper
+from src.exceptions import FilePathNotFoundError
+from .file_helper import FilePathHelper, get_content_type_by_extension
 
 
 class FileManager(ABC):
@@ -16,6 +17,13 @@ class FileManager(ABC):
         file_path: Path,
         file: UploadFile,
     ) -> str:
+        """Сохраняет файл"""
+        raise NotImplementedError()
+
+    @staticmethod
+    @abstractmethod
+    async def download_file(file_path: Path) -> tuple[bytes, str, str]:
+        """Скачивает файл"""
         raise NotImplementedError()
 
 
@@ -27,7 +35,7 @@ class LocalFileManager(FileManager):
         file_path: Path,
         file: UploadFile,
     ) -> str:
-
+        """Сохранение файла на локалке"""
         save_file_path = FilePathHelper.get_local_base_media_dir() / file_path
         FilePathHelper.ensure_directory_exists(save_file_path)
 
@@ -35,15 +43,35 @@ class LocalFileManager(FileManager):
         async with aiofiles.open(save_file_path, "wb") as f:
             while chunk := await file.read(1024 * 1024):
                 await f.write(chunk)
-        return str(save_file_path)
+        return str(file_path)
+
+    @staticmethod
+    async def download_file(file_path: Path) -> tuple[bytes, str, str]:
+        """Скачивание файла с локалки"""
+        full_path = FilePathHelper.get_local_base_media_dir() / file_path
+        if not full_path.exists():
+            raise FilePathNotFoundError()
+
+        filename = FilePathHelper.extract_filename_from_message_file_path(full_path)
+        content_type = get_content_type_by_extension(full_path.suffix)
+
+        async with aiofiles.open(full_path, "rb") as f:
+            content = await f.read()
+
+        return content, content_type, filename
 
 
 class S3FileManager(FileManager):
     """Работа с файлами в S3 хранилище"""
 
     # TODO: Реальная загрузка через S3
+    @staticmethod
     async def save_file(*args, **kwargs) -> str:
-        return ""
+        pass
+
+    @staticmethod
+    async def download_file(file_path: Path) -> tuple[bytes, str, str]:
+        pass
 
 
 def get_file_manager() -> type[FileManager]:

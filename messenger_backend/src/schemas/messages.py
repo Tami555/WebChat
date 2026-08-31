@@ -65,29 +65,3 @@ class MessageCreateRequest(BaseModel):
             file_url=file_url,
             created_at=created_at,
         )
-
-
-class UploadMessageFileRequest(BaseModel):
-    """Схема отправки файла"""
-
-    chat_id: UUID
-    chat_type: ChatType
-    file_type: MessageType
-
-    @staticmethod
-    def upload_message_file_by_form(
-        chat_id: UUID = Form(...),
-        chat_type: ChatType = Form(...),
-        file_type: MessageType = Form(...),
-    ) -> "UploadMessageFileRequest":
-        return UploadMessageFileRequest(
-            chat_id=chat_id, chat_type=chat_type, file_type=file_type
-        )
-
-
-class SaveMessageFileRequest(BaseModel):
-    """Схема сохранения файла"""
-
-    chat_id: UUID
-    file_type: MessageType
-    username: str

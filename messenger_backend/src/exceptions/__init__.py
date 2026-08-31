@@ -19,8 +19,9 @@ __all__ = (
     "DialogWithOneUserError",
     "DialogNotFoundError",
     "UserIsNotDialogInterlocutorError",
-    "MissedDataForMessageTypeError",
     "NotCorrectMessageTypeForFileTypeError",
+    "FilePathNotFoundError",
+    "MissedDataForMessageTypeError",
     "MessageNotFoundError",
     "FutureTimestampMessageError",
     "StickerNotFoundError",
@@ -55,9 +56,9 @@ from .errors.dialogs import (
     DialogNotFoundError,
     UserIsNotDialogInterlocutorError,
 )
+from .errors.files import NotCorrectMessageTypeForFileTypeError, FilePathNotFoundError
 from .errors.messages import (
     MissedDataForMessageTypeError,
-    NotCorrectMessageTypeForFileTypeError,
     MessageNotFoundError,
     FutureTimestampMessageError,
 )

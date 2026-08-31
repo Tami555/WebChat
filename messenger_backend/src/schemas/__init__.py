@@ -16,6 +16,8 @@ __all__ = (
     "MessageCreateRequest",
     "SaveMessageFileRequest",
     "UploadMessageFileRequest",
+    "DownloadMessageFileRequest",
+    "DeleteMessageFileRequest",
     "ChatResponse",
     "AllChatsResponse",
     "CreateGroupRequest",
@@ -50,12 +52,12 @@ from .auth import (
     VerificationCodeResponse,
 )
 from .users import UserResponse, ShortUserResponse, CreateUserRequest
-from .messages import (
-    ShortMessageResponse,
-    MessageResponse,
-    MessageCreateRequest,
+from .messages import ShortMessageResponse, MessageResponse, MessageCreateRequest
+from .files import (
     SaveMessageFileRequest,
     UploadMessageFileRequest,
+    DownloadMessageFileRequest,
+    DeleteMessageFileRequest,
 )
 from .chats import ChatResponse, AllChatsResponse
 from .groups import CreateGroupRequest, GroupResponse, CreateGroupWithMembersRequest
