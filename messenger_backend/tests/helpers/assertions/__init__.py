@@ -6,6 +6,7 @@ __all__ = [
     "MessageDatabaseAssertions",
     "DialogDatabaseAssertions",
     "GroupDatabaseAssertions",
+    "FilesAssertions",
 ]
 
 from .redis import VerificationRedisAssertions
@@ -17,3 +18,4 @@ from .database import (
     DialogDatabaseAssertions,
     GroupDatabaseAssertions,
 )
+from .files import FilesAssertions

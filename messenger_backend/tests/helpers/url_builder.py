@@ -18,6 +18,9 @@ class URLBuilder:
     def chats(self, *parts: str) -> str:
         return self.build("chats", *parts)
 
+    def files(self, *parts: str) -> str:
+        return self.build("files", *parts)
+
     def users(self, *parts: str) -> str:
         return self.build("users", *parts)
 

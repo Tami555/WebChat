@@ -144,17 +144,33 @@ async def auth_tokens_user_2(created_user_2):
 
 
 @pytest.fixture
-async def auth_client_user_1(client, auth_tokens_user_1):
+async def auth_client_user_1(auth_tokens_user_1):
     """Авторизованный HTTP-клиент пользователь-1"""
-    client.headers["Authorization"] = f"Bearer {auth_tokens_user_1.access_token}"
-    return client
+    from src.main import app
+
+    # новый клиент
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        timeout=30.0,
+        headers={"Authorization": f"Bearer {auth_tokens_user_1.access_token}"},
+    ) as auth_client:
+        yield auth_client
 
 
 @pytest.fixture
-async def auth_client_user_2(client, auth_tokens_user_2):
+async def auth_client_user_2(auth_tokens_user_2):
     """Авторизованный HTTP-клиент пользователь-2"""
-    client.headers["Authorization"] = f"Bearer {auth_tokens_user_2.access_token}"
-    return client
+    from src.main import app
+
+    # новый клиент
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        timeout=30.0,
+        headers={"Authorization": f"Bearer {auth_tokens_user_2.access_token}"},
+    ) as auth_client:
+        yield auth_client
 
 
 # ФИКСТУРЫ ДЛЯ ДИАЛОГОВ

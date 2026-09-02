@@ -8,8 +8,9 @@ from tests.helpers.assertions import (
     MessageDatabaseAssertions,
     GroupDatabaseAssertions,
     DialogDatabaseAssertions,
+    FilesAssertions,
 )
-from tests.helpers import url_builder, FileFactory
+from tests.helpers import url_builder
 from tests.fixtures.data import UserDataFactory, MessagesDataFactory
 
 
@@ -1308,8 +1309,9 @@ class TestChats:
                     assert message.file_url is not None
 
                     # Проверяем, что файл сохранен и удаляем его
-                    assert (self.base_path / Path(str(message.file_url))).exists()
-                    FileFactory.cleanup_test_messages_files(chat_id)
+                    FilesAssertions.assert_file_exists_and_delete(
+                        file_path=str(message.file_url), chat_id=chat_id
+                    )
 
             @pytest.mark.asyncio
             async def test_create_image_message_with_file_success(
@@ -1349,8 +1351,9 @@ class TestChats:
                     assert message.file_url is not None
 
                     # Проверяем, что файл сохранен и удаляем его
-                    assert (self.base_path / Path(str(message.file_url))).exists()
-                    FileFactory.cleanup_test_messages_files(chat_id)
+                    FilesAssertions.assert_file_exists_and_delete(
+                        file_path=str(message.file_url), chat_id=chat_id
+                    )
 
             @pytest.mark.asyncio
             async def test_create_voice_message_with_file_success(
@@ -1391,8 +1394,9 @@ class TestChats:
                     assert message.file_url is not None
 
                     # Проверяем, что файл сохранен и удаляем его
-                    assert (self.base_path / Path(str(message.file_url))).exists()
-                    FileFactory.cleanup_test_messages_files(chat_id)
+                    FilesAssertions.assert_file_exists_and_delete(
+                        file_path=str(message.file_url), chat_id=chat_id
+                    )
 
             @pytest.mark.asyncio
             async def test_create_text_message_with_file_wrong_type(
