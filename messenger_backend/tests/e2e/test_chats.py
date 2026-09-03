@@ -12,6 +12,7 @@ from tests.helpers.assertions import (
 )
 from tests.helpers import url_builder
 from tests.fixtures.data import UserDataFactory, MessagesDataFactory
+from tests.helpers.factories import FileFactory
 
 
 class TestChats:
@@ -1174,7 +1175,7 @@ class TestChats:
                     auth_client_user_1,
                     created_dialog_user1_user2,
                 ):
-                    """Тест: создание сообщения со стикером без sticker_id"""
+                    """Тест: создание сообщения типа file без file_url"""
                     chat_id = created_dialog_user1_user2.id
 
                     data = MessagesDataFactory.create_message_data(
@@ -1454,3 +1455,33 @@ class TestChats:
                     expected_message="Для типа сообщения image, не подходит тип файла text/plain",
                     expected_status=415,
                 )
+
+            @pytest.mark.asyncio
+            async def test_create_message_file_without_file_url(
+                self,
+                test_text_file,
+                created_user_1,
+                auth_client_user_1,
+                created_dialog_user1_user2,
+            ):
+                """Тест: создание сообщения с типом file без file_url
+                Ожидается успех, т.к file_url добавиться автоматически
+                """
+                chat_id = created_dialog_user1_user2.id
+
+                data = MessagesDataFactory.create_message_data(
+                    chat_type=ChatType.DIALOGS,
+                    chat_id=str(chat_id),
+                    message_type=MessageType.FILE,
+                    file_url=None,
+                )
+                with open(test_text_file, "rb") as f:
+                    files = {"message_file": ("test.txt", f, "text/plain")}
+                    response = await auth_client_user_1.post(
+                        TestChats.create_message_url,
+                        data=data,
+                        files=files,
+                    )
+                assert response.status_code == 200
+                # Удаляем
+                FileFactory.cleanup_test_messages_files(chat_id)
