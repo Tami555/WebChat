@@ -1,4 +1,6 @@
 import datetime
+import logging
+from pathlib import Path
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -12,7 +14,11 @@ from src.services import MessageService, UserService
 from src.models import Users
 from src.core.redis import online_redis
 from src.core.websocket.manager import websocket_manager
+from src.utils.files import get_file_manager
 from src.utils.notifications import get_notification_manager
+from src.exceptions import BaseAppException
+
+logger = logging.getLogger(__name__)
 
 
 class WebsocketService:
@@ -26,11 +32,21 @@ class WebsocketService:
     ) -> dict | str:
         """Основной метод обработки входящего сообщения"""
         # Создаем сообщение в БД
-        created_message = await MessageService.create_message(
-            user=sender_user,
-            session=session,
-            message_data=message_data,
-        )
+        try:
+            created_message = await MessageService.create_message(
+                user=sender_user,
+                session=session,
+                message_data=message_data,
+            )
+        except (BaseAppException, Exception) as err:
+            if message_data.file_url is not None:
+                # удаляем файл
+                file_path = Path(message_data.file_url)
+                logger.warning("Файл сообщения будет удален")
+                file_manager = get_file_manager()
+                await file_manager.delete_file(file_path)
+            raise err
+
         message_response = MessageResponse.model_validate(created_message)
 
         # Получаем участников чата. Кто онлайн/офлайн
