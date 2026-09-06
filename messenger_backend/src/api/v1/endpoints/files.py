@@ -1,5 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, UploadFile, Response
+from urllib.parse import quote
 
 from src.api.v1.dependencies import get_current_user
 from src.core.database import database_helper
@@ -45,11 +46,11 @@ async def download_message_file(
         user=user,
         session=session,
     )
-
+    encoded_filename = quote(filename, encoding="utf-8")
     return Response(
         content=content,
         media_type=content_type,
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={"Content-Disposition": f'attachment; filename="{encoded_filename}"'},
     )
 
 
