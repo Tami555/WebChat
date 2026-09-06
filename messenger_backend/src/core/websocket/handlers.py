@@ -17,9 +17,19 @@ class WebSocketHandlers:
     """Обработчики WebSocket сообщений"""
 
     @staticmethod
-    async def handle_join_chat(user: Users, data: JoinChatMessageRequest, **kwargs):
+    async def handle_join_chat(
+        user: Users,
+        session: AsyncSession,
+        data: JoinChatMessageRequest,
+        **kwargs,
+    ):
         """Обработчик входа в чат"""
-        websocket_manager.set_user_chat(user.username, data.chat_id, data.chat_type)
+        await WebsocketService.join_to_chat(
+            sender_user=user,
+            chat_id=data.chat_id,
+            chat_type=data.chat_type,
+            session=session,
+        )
 
     @staticmethod
     async def handle_leave_chat(user: Users, **kwargs):

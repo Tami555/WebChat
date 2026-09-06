@@ -145,3 +145,19 @@ class WebsocketService:
                     to_username=participant,
                     data=response.model_dump_json(),
                 )
+
+    @staticmethod
+    async def join_to_chat(
+        sender_user: Users,
+        chat_id: UUID,
+        chat_type: ChatType,
+        session: AsyncSession,
+    ):
+        """Войти в чат (находиться в сети чата)"""
+        await MessageService.check_user_is_member(
+            user_id=sender_user.id,
+            chat_id=chat_id,
+            chat_type=chat_type,
+            session=session,
+        )
+        websocket_manager.set_user_chat(sender_user.username, chat_id, chat_type)
