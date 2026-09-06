@@ -122,6 +122,22 @@ class DialogDatabaseAssertions:
     """Проверки для диалогов в БД"""
 
     @staticmethod
+    async def assert_dialog_exists(
+        session: AsyncSession,
+        user1_id: UUID,
+        user2_id: UUID,
+    ):
+        """Проверяет, что диалог существует и возвращает его"""
+        dialog = await DatabaseAssertions.assert_exists(
+            session,
+            Dialogs,
+            user1_id=user1_id,
+            user2_id=user2_id,
+        )
+        assert dialog is not None
+        return dialog
+
+    @staticmethod
     async def assert_last_message(
         session: AsyncSession,
         dialog_id: UUID,
