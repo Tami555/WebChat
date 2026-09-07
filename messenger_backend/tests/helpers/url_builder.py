@@ -27,6 +27,9 @@ class URLBuilder:
     def dialogs(self, *parts: str) -> str:
         return self.build("dialogs", *parts)
 
+    def groups(self, *parts: str) -> str:
+        return self.build("groups", *parts)
+
 
 url_builder = URLBuilder()
 

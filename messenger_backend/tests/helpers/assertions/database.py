@@ -2,7 +2,7 @@ from uuid import UUID
 from typing import Optional, TypeVar
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.models import Users, Messages, Dialogs, Groups
+from src.models import Users, Messages, Dialogs, Groups, GroupMembers
 from src.crud import MessageCRUD
 
 T = TypeVar("T")
@@ -150,6 +150,38 @@ class DialogDatabaseAssertions:
 
 class GroupDatabaseAssertions:
     """Проверки для группы в БД"""
+
+    @staticmethod
+    async def assert_group_exists(
+        session: AsyncSession,
+        group_id: UUID,
+        expected_title: str,
+        expected_created_by: UUID,
+    ):
+        """Проверяет, что группа существует и возвращает ее"""
+        group = await DatabaseAssertions.assert_exists(
+            session,
+            Groups,
+            id=group_id,
+        )
+        assert group.title == expected_title
+        assert group.created_by == expected_created_by
+        return group
+
+    @staticmethod
+    async def assert_member_in_group(
+        session: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ):
+        """Проверяет, что пользователь является участником группы"""
+        member = await DatabaseAssertions.assert_exists(
+            session,
+            GroupMembers,
+            group_id=group_id,
+            user_id=user_id,
+        )
+        return member
 
     @staticmethod
     async def assert_last_message(
