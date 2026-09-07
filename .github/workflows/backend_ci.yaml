@@ -1,0 +1,83 @@
+name: Backend CI
+run-name: "CI: Testing Backend App"
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'messenger_backend/**'
+      - '.github/workflows/backend_ci.yaml'
+      - '.github/actions/poetry-and-env/**'
+
+jobs:
+  formatter:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./messenger_backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install poetry and create env
+        uses: ./.github/actions/poetry-and-env
+        with:
+          working-directory: ./messenger_backend
+
+      - name: Check code formatting with Black
+        run: poetry run black --check .
+
+  testing:
+    runs-on: ubuntu-latest
+    needs: formatter
+    environment: testing
+    defaults:
+      run:
+        working-directory: ./messenger_backend
+    services:
+      postgresql:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: ${{ secrets.TEST_DB_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.TEST_DB_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.TEST_DB_NAME }}
+        ports:
+          - 5432:5432
+      redis:
+        image: redis:latest
+        ports:
+          - 6379:6379
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install poetry and create env
+        uses: ./.github/actions/poetry-and-env
+        with:
+          working-directory: ./messenger_backend
+
+      - name: Create .env.test from secrets
+        run: |
+          cat > .env.test << EOF
+          WEBCHAT_APP__environment="testing"
+          
+          WEBCHAT_LOGGING__LEVEL="INFO"
+          WEBCHAT_LOGGING__FORMAT="[%(asctime)s] - %(levelname)s - %(module)s:%(lineno)d - %(message)s"
+          
+          WEBCHAT_DB__USER=${{ secrets.TEST_DB_USER }}
+          WEBCHAT_DB__PASSWORD=${{ secrets.TEST_DB_PASSWORD }}
+          WEBCHAT_DB__NAME=${{ secrets.TEST_DB_NAME }}
+          WEBCHAT_DB__HOST=postgresql
+          WEBCHAT_DB__PORT=5432
+          WEBCHAT_DB__ECHO=False
+          
+          WEBCHAT_AUTH__APP_SECRET_KEY=${{ secrets.TEST_AUTH_SECRET_KEY }}
+          WEBCHAT_AUTH__JWT_ALGORITHM=${{ secrets.TEST_AUTH_ALGORITHM }}
+          
+          WEBCHAT_REDIS__HOST=redis
+          WEBCHAT_REDIS__PORT=6379
+          WEBCHAT_REDIS__DB=${{ secrets.TEST_REDIS_DB }}
+          
+          EOF
+        shell: bash
+
+      - name: Test App
+        run: poetry run pytest -s -v

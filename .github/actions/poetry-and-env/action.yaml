@@ -1,0 +1,33 @@
+name: "Install Poetry and Create project ENV"
+description: "Install poetry and cached it. Also create project Env and install dependencies"
+
+inputs:
+  working-directory:
+    description: "directory app"
+    required: false
+    default: "."
+
+runs:
+  using: composite
+  steps:
+    - name: Cache Poetry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cache/pypoetry
+          ${{ inputs.working-directory }}/.venv
+        key: poetry-${{ runner.os }}-${{ hashFiles(format('{0}/poetry.lock', inputs.working-directory)) }}
+        restore-keys: |
+          poetry-${{ runner.os }}-
+          poetry-
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Create env and install dependencies
+      run: poetry install --no-interaction --no-root
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
