@@ -86,10 +86,15 @@ jobs:
           WEBCHAT_REDIS__PORT=6379
           WEBCHAT_REDIS__DB=${{ secrets.TEST_REDIS_DB }}
           EOF
+        working-directory: .
         shell: bash
 
       - name: Verify .env.test
-        run: cat .env.test
+        run: |
+          echo "=== Working dir: $(pwd) ==="
+          echo "=== .env.test in root ==="
+          cat ../.env.test
+        shell: bash
 
       - name: Test App
         run: poetry run pytest -s -v
