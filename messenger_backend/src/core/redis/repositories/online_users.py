@@ -1,10 +1,12 @@
 from typing import Optional, Set
 from src.core.redis.repositories.base import BaseRedisRepository
-from src.core.config import settings
+from src.core.config import get_settings
 
 
 class OnlineUsersRedisRepository(BaseRedisRepository):
     """Redis: Репозиторий для онлайн-пользователей"""
+
+    settings = get_settings()
 
     ONLINE_NAMESPACE = settings.redis.namespaces.users_online
     SERVER_NAMESPACE = settings.redis.namespaces.ws_server_user

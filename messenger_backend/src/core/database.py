@@ -6,7 +6,9 @@ from sqlalchemy.ext.asyncio import (
 )
 
 from src.models import Base
-from .config import settings
+from .config import get_settings
+
+settings = get_settings()
 
 
 class DatabaseHelper:

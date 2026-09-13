@@ -1,6 +1,6 @@
 import redis.asyncio as aioredis
 
-from src.core.config import settings
+from src.core.config import get_settings
 
 
 class RedisManager:
@@ -8,6 +8,8 @@ class RedisManager:
         self._client = None
 
     async def connect(self):
+        settings = get_settings()
+
         self._client = await aioredis.from_url(
             settings.redis.url,
             decode_responses=True,

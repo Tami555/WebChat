@@ -1,23 +1,19 @@
+import os
 import pytest
 from httpx import AsyncClient, ASGITransport
-from unittest.mock import patch
 
-
-@pytest.fixture(scope="session")
-def test_settings():
-    """Настройки для тестов"""
-    from src.core.config import get_settings
-
-    return get_settings(".env.test")
+os.environ["WEBCHAT_ENV_FILE"] = ".env.test"
 
 
 @pytest.fixture(autouse=True)
-def override_settings(test_settings):
-    """Переопределяем глобальные настройки для всех тестов"""
-    import src.core.config
+def override_settings():
+    from src.core.config import get_settings
 
-    with patch.object(src.core.config, "settings", test_settings):
-        yield
+    os.environ["WEBCHAT_ENV_FILE"] = ".env.test"
+    get_settings.cache_clear()
+    yield
+    os.environ.pop("WEBCHAT_ENV_FILE", None)
+    get_settings.cache_clear()
 
 
 @pytest.fixture

@@ -1,7 +1,7 @@
 import json
 
 from src.core.redis import verification_redis
-from src.core.config import settings
+from src.core.config import get_settings
 from src.utils.verifications import VerificationCodeGenerator
 from src.exceptions import (
     VerificationCodeExpiredError,
@@ -13,6 +13,8 @@ from src.utils.notifications import get_sms_manager
 
 class VerificationService:
     """Сервис для работы с верификацией телефона"""
+
+    settings = get_settings()
 
     MAX_ATTEMPTS = settings.verification.max_attempts
 

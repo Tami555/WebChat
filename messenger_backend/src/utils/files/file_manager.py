@@ -3,7 +3,7 @@ from pathlib import Path
 from fastapi import UploadFile
 import aiofiles
 
-from src.core.config import settings
+from src.core.config import get_settings
 from src.exceptions import FilePathNotFoundError
 from .file_helper import FilePathHelper, get_content_type_by_extension
 
@@ -104,6 +104,7 @@ class S3FileManager(FileManager):
 
 def get_file_manager() -> type[FileManager]:
     """Фабрика для получения менеджера файлов"""
+    settings = get_settings()
     if settings.app.environment == "production":
         return S3FileManager
     return LocalFileManager

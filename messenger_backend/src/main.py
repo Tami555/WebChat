@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from src.core.config import settings
+from src.core.config import get_settings
 from src.core.redis import online_redis, redis_manager
 from src.exceptions import exception_handler
 from src.api.v1 import router as api_v1_router
@@ -12,6 +12,7 @@ from src.core.websocket import websocket_manager
 from src.utils.logging.config import setup_logging
 
 logger = logging.getLogger(__name__)
+settings = get_settings()
 
 
 @asynccontextmanager

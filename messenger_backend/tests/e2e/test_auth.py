@@ -1,7 +1,7 @@
 import pytest
 
 from src.core.redis import verification_redis
-from src.core.config import settings
+from src.core.config import get_settings
 from tests.fixtures.data import UserDataFactory
 from tests.helpers import url_builder, TokenFactory
 from tests.helpers.assertions import (
@@ -166,6 +166,7 @@ class TestAuth:
                 self, redis_connect, client
             ):
                 """Тест запроса подтверждения регистрации, с большим количеством попыток"""
+                settings = get_settings()
                 user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis
@@ -397,6 +398,7 @@ class TestAuth:
                 self, redis_connect, created_user_1, client
             ):
                 """Тест запроса подтверждения входа, с большим количеством попыток"""
+                settings = get_settings()
                 user_data = UserDataFactory.user_1()
 
                 # Сохраняем данные в Redis

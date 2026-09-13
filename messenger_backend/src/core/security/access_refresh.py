@@ -1,8 +1,10 @@
 from src.models import Users
-from src.core.config import settings
+from src.core.config import get_settings
 from src.schemas import AccessTokenContent, RefreshTokenContent
 from src.schemas.enums import TokenType
 from .tokens import create_jwt_token, check_jwt_token_type
+
+settings = get_settings()
 
 
 # Генерация токенов
