@@ -10,7 +10,6 @@ from alembic import context
 from src.models import Base
 from src.core.config import settings
 
-
 # this is the Alembic Config object
 config = context.config
 

@@ -45,7 +45,9 @@ def upgrade() -> None:
     op.create_index(
         op.f("ix_messages_dialog_id"), "messages", ["dialog_id"], unique=False
     )
-    op.create_index(op.f("ix_messages_group_id"), "messages", ["group_id"], unique=False)
+    op.create_index(
+        op.f("ix_messages_group_id"), "messages", ["group_id"], unique=False
+    )
     op.create_index(
         op.f("ix_messages_is_deleted"), "messages", ["is_deleted"], unique=False
     )
