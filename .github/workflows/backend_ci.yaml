@@ -42,10 +42,20 @@ jobs:
           POSTGRES_DB: ${{ secrets.TEST_DB_NAME }}
         ports:
           - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
       redis:
         image: redis:latest
         ports:
           - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
       - uses: actions/checkout@v4
 
@@ -65,19 +75,21 @@ jobs:
           WEBCHAT_DB__USER=${{ secrets.TEST_DB_USER }}
           WEBCHAT_DB__PASSWORD=${{ secrets.TEST_DB_PASSWORD }}
           WEBCHAT_DB__NAME=${{ secrets.TEST_DB_NAME }}
-          WEBCHAT_DB__HOST=postgresql
+          WEBCHAT_DB__HOST=localhost
           WEBCHAT_DB__PORT=5432
           WEBCHAT_DB__ECHO=False
           
           WEBCHAT_AUTH__APP_SECRET_KEY=${{ secrets.TEST_AUTH_SECRET_KEY }}
           WEBCHAT_AUTH__JWT_ALGORITHM=${{ secrets.TEST_AUTH_ALGORITHM }}
           
-          WEBCHAT_REDIS__HOST=redis
+          WEBCHAT_REDIS__HOST=localhost
           WEBCHAT_REDIS__PORT=6379
           WEBCHAT_REDIS__DB=${{ secrets.TEST_REDIS_DB }}
-          
           EOF
         shell: bash
+
+      - name: Verify .env.test
+        run: cat .env.test
 
       - name: Test App
         run: poetry run pytest -s -v
