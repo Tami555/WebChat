@@ -1,7 +1,7 @@
 from pathlib import Path
 from uuid import uuid5, uuid4, UUID
 
-from src.core.config import settings
+from src.core.config import get_settings
 from src.schemas.enums import MessageType, ChatType
 
 
@@ -79,6 +79,8 @@ class FilePathHelper:
     @staticmethod
     def get_local_base_media_dir() -> Path:
         """Определяет директорию работы с файлами на локалке, исходе из окружения"""
+        settings = get_settings()
+
         base_path = Path(__file__).parent.parent.parent.parent
         return base_path / (
             "test_media" if settings.app.environment == "testing" else "media"

@@ -1,8 +1,12 @@
 import logging
+import os
+from functools import lru_cache
+
 from pydantic import BaseModel
 from pathlib import Path
 from pydantic_settings import SettingsConfigDict, BaseSettings
 
+logger = logging.getLogger(__name__)
 BASE_PATH = Path(__file__).parent.parent.parent.parent
 
 
@@ -94,10 +98,10 @@ class Settings(BaseSettings):
     )
 
 
-def get_settings(env_file: str = ".env") -> Settings:
-    """Создает настройки из указанного .env файла"""
+@lru_cache
+def get_settings() -> Settings:
+    """Получить настройки (кэшируется)"""
+    env_file = os.getenv("WEBCHAT_ENV_FILE", ".env")
+    logger.debug(f"Используется файл {env_file}")
     env_path = BASE_PATH / env_file
     return Settings(_env_file=env_path)
-
-
-settings = Settings()

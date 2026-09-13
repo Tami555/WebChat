@@ -1,7 +1,9 @@
 import logging.config
 from pathlib import Path
 
-from src.core.config import settings
+from src.core.config import get_settings
+
+settings = get_settings()
 
 LOGGING_CONFIG = {
     "version": 1,

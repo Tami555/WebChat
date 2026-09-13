@@ -1,11 +1,13 @@
 import json
 from typing import Optional
 from src.core.redis.repositories.base import BaseRedisRepository
-from src.core.config import settings
+from src.core.config import get_settings
 
 
 class VerificationRedisRepository(BaseRedisRepository):
     """Redis: Репозиторий для верификации"""
+
+    settings = get_settings()
 
     NAMESPACE = settings.redis.namespaces.phone_verification
     CODE_TTL = settings.verification.code_ttl

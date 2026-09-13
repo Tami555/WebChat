@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.core.config import settings
+from src.core.config import get_settings
 from src.schemas.messages import MessageResponse
 
 
@@ -74,6 +74,7 @@ class FirebaseNotificationManager(NotificationManager):
 
 def get_notification_manager() -> type[NotificationManager]:
     """Фабрика для получения менеджера уведомлений"""
+    settings = get_settings()
     if settings.app.environment == "production":
         return FirebaseNotificationManager
     return MockNotificationManager

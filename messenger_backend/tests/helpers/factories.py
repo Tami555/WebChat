@@ -1,7 +1,7 @@
 from uuid import UUID
 from pathlib import Path
 
-from src.core.config import settings
+from src.core.config import get_settings
 from src.core.security.tokens import create_jwt_token
 from src.schemas.enums import TokenType
 
@@ -15,6 +15,7 @@ class TokenFactory:
         expired: bool = False,
     ) -> bytes:
         """Создает access токен"""
+        settings = get_settings()
         return create_jwt_token(
             type_token=TokenType.ACCESS_TOKEN,
             payload={"sub": username},
@@ -27,6 +28,7 @@ class TokenFactory:
         expired: bool = False,
     ) -> bytes:
         """Создает refresh токен"""
+        settings = get_settings()
         return create_jwt_token(
             type_token=TokenType.REFRESH_TOKEN,
             payload={"sub": username},

@@ -2,7 +2,10 @@ from typing import Annotated, Union, TYPE_CHECKING
 from pydantic import BaseModel, field_validator
 from pydantic_extra_types.phone_numbers import PhoneNumber, PhoneNumberValidator
 
-from src.core.config import settings
+from src.core.config import get_settings
+
+settings = get_settings()
+
 
 if TYPE_CHECKING:
     from src.models import Users

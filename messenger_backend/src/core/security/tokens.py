@@ -1,6 +1,8 @@
 from .jwt import encode_jwt, decode_jwt
-from src.core.config import settings
+from src.core.config import get_settings
 from src.schemas.enums import TokenType
+
+settings = get_settings()
 
 
 def create_jwt_token(

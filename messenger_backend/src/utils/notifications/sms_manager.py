@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from src.core.config import settings
+from src.core.config import get_settings
 
 
 class SMSManager(ABC):
@@ -51,6 +51,7 @@ class TwilioSMSManager(SMSManager):
 # Выбор менеджера через настройки
 def get_sms_manager() -> type[SMSManager]:
     """Фабрика для получения SMS менеджера"""
+    settings = get_settings()
     if settings.app.environment == "production":
         return TwilioSMSManager
     return MockSMSManager

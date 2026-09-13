@@ -1,10 +1,12 @@
 import json
 from src.core.redis.repositories.base import BaseRedisRepository
-from src.core.config import settings
+from src.core.config import get_settings
 
 
 class PubSubRedisRepository(BaseRedisRepository):
     """Redis: Репозиторий для Pub/Sub"""
+
+    settings = get_settings()
 
     PUBSUB_NAMESPACE = settings.redis.namespaces.pubsub_server
 
