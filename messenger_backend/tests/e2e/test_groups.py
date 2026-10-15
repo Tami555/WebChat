@@ -3,7 +3,7 @@ from uuid import uuid4
 from datetime import datetime
 from httpx import AsyncClient
 
-from src.schemas import ChatResponse, GroupResponse
+from src.schemas import ChatResponse, ShortGroupResponse
 from src.models.groups import Groups
 from src.models.group_members import GroupMembers
 from tests.helpers.assertions import HttpAssertions, GroupDatabaseAssertions
@@ -151,7 +151,7 @@ class TestGroups:
 
             group_data = HttpAssertions.assert_success_response(
                 response=response,
-                response_model=GroupResponse,
+                response_model=ShortGroupResponse,
             )
 
             assert group_data.id is not None
@@ -352,7 +352,7 @@ class TestGroups:
 
             group_data = HttpAssertions.assert_success_response(
                 response=response,
-                response_model=GroupResponse,
+                response_model=ShortGroupResponse,
             )
 
             # Проверяем, что группа появилась в БД
@@ -415,7 +415,7 @@ class TestGroups:
 
             group_data = HttpAssertions.assert_success_response(
                 response=response,
-                response_model=GroupResponse,
+                response_model=ShortGroupResponse,
             )
 
             assert group_data.id is not None

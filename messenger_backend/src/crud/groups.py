@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from src.models import Groups, GroupMembers, Messages
-from src.schemas.enums import GroupMemberRole
+from src.schemas.enums import GroupMemberRole, MessageType
 
 
 class GroupCRUD:
@@ -93,3 +93,15 @@ class GroupCRUD:
         group.last_message = last_message
         session.add(group)
         await session.commit()
+
+    @staticmethod
+    async def get_group_media(group_id: UUID, session: AsyncSession) -> list:
+        """Получение медиа (файлы) группы"""
+        stmt = select(Messages.type, Messages.file_url).where(
+            Messages.group_id == group_id
+            and Messages.type.in_(
+                [MessageType.IMAGE, MessageType.VOICE, MessageType.FILE]
+            )
+        )
+        messages = await session.execute(stmt)
+        return list(messages.all())

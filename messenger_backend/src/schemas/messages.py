@@ -65,3 +65,11 @@ class MessageCreateRequest(BaseModel):
             file_url=file_url,
             created_at=created_at,
         )
+
+
+class MediaMessagesResponse(BaseModel):
+    """Схема медиа-сообщений (сгруппированных по типу)"""
+
+    images: list[str]
+    voices: list[str]
+    files: list[str]

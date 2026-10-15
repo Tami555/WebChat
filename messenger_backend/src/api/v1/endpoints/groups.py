@@ -1,10 +1,16 @@
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends
 
 import src.api.v1.dependencies as dependencies
 from src.core.database import database_helper
 from src.models import Users
-from src.schemas import GroupResponse, CreateGroupWithMembersRequest, ChatResponse
+from src.schemas import (
+    ShortGroupResponse,
+    GroupResponse,
+    CreateGroupWithMembersRequest,
+    ChatResponse,
+)
 from src.services import GroupService
 
 router = APIRouter()
@@ -19,7 +25,7 @@ async def get_group_chats(
     return await GroupService.get_groups_by_user(user=user, session=session)
 
 
-@router.post("/create", response_model=GroupResponse)
+@router.post("/create", response_model=ShortGroupResponse)
 async def create_group(
     data: CreateGroupWithMembersRequest,
     user: Users = Depends(dependencies.get_current_user),
@@ -32,3 +38,13 @@ async def create_group(
         session=session,
     )
     return new_group
+
+
+@router.get("/{group_id}", response_model=GroupResponse)
+async def get_group_by_id(
+    group_id: UUID,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+) -> GroupResponse:
+    """Получить полную информацию о группе по id"""
+    return await GroupService.get_group_detail(user.id, group_id, session)

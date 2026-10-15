@@ -3,7 +3,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Groups, Messages
 from src.crud import GroupCRUD, UserCRUD, MessageCRUD
-from src.schemas import ChatResponse, CreateGroupWithMembersRequest
+from src.schemas import (
+    ChatResponse,
+    CreateGroupWithMembersRequest,
+    GroupResponse,
+    UserInGroupResponse,
+)
+from src.schemas.enums import MessageType
 from src.exceptions import (
     CreatorIsNotMemberError,
     RecurringMembersError,
@@ -106,9 +112,53 @@ class GroupService:
         group = await GroupService.get_group_by_id(group_id, session)
         await GroupCRUD.set_last_message(group, last_message, session)
 
-    # Добавление, удаление пользователей из группы
-    # Изменение роли пользователя (нельзя лишить creater_user админства)
+    @staticmethod
+    async def get_group_detail(
+        user_id: UUID, group_id: UUID, session: AsyncSession
+    ) -> GroupResponse:
+        """Получение полной информации о группе"""
+        group = await GroupCRUD.get_group_with_members(group_id, session)
+        if group is None:
+            raise GroupNotFoundError()
+        if group.is_private:
+            await GroupService.check_user_in_group_members(user_id, group_id, session)
+        media = await GroupCRUD.get_group_media(group_id, session)
+
+        members = []
+        media_files = {"images": [], "voices": [], "files": []}
+        for m in group.group_members:
+            members.append(
+                UserInGroupResponse(
+                    username=m.member.username,
+                    avatar_url=m.member.avatar_url,
+                    is_online=m.member.is_online,
+                    last_seen=m.member.last_seen,
+                    role=m.role,
+                )
+            )
+
+        for m in media:
+            match m.type:
+                case MessageType.IMAGE:
+                    media_files["images"].append(m.file_url)
+                case MessageType.VOICE:
+                    media_files["voices"].append(m.file_url)
+                case MessageType.FILE:
+                    media_files["files"].append(m.file_url)
+
+        return GroupResponse(
+            id=group.id,
+            title=group.title,
+            is_private=group.is_private,
+            description=group.description,
+            avatar_url=group.avatar_url,
+            created_at=group.created_at,
+            members=members,
+            media=media_files,
+        )
+
+    # TODO:
+    # Добавление/удаление пользователей из группы
+    # Изменение роли пользователя
     # Редактирование группы (название, ава, т.д)
     # Удаление группы
-    # Поиск по названию
-    # Получение всей инфы

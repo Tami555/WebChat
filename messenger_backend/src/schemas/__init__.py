@@ -11,9 +11,11 @@ __all__ = (
     "UserResponse",
     "ShortUserResponse",
     "CreateUserRequest",
+    "UserInGroupResponse",
     "ShortMessageResponse",
     "MessageResponse",
     "MessageCreateRequest",
+    "MediaMessagesResponse",
     "SaveMessageFileRequest",
     "UploadMessageFileRequest",
     "DownloadMessageFileRequest",
@@ -21,6 +23,7 @@ __all__ = (
     "ChatResponse",
     "AllChatsResponse",
     "CreateGroupRequest",
+    "ShortGroupResponse",
     "GroupResponse",
     "CreateGroupWithMembersRequest",
     "CreateDialogRequest",
@@ -51,8 +54,18 @@ from .auth import (
     PhoneVerificationRequest,
     VerificationCodeResponse,
 )
-from .users import UserResponse, ShortUserResponse, CreateUserRequest
-from .messages import ShortMessageResponse, MessageResponse, MessageCreateRequest
+from .users import (
+    UserResponse,
+    ShortUserResponse,
+    CreateUserRequest,
+    UserInGroupResponse,
+)
+from .messages import (
+    ShortMessageResponse,
+    MessageResponse,
+    MessageCreateRequest,
+    MediaMessagesResponse,
+)
 from .files import (
     SaveMessageFileRequest,
     UploadMessageFileRequest,
@@ -60,7 +73,12 @@ from .files import (
     DeleteMessageFileRequest,
 )
 from .chats import ChatResponse, AllChatsResponse
-from .groups import CreateGroupRequest, GroupResponse, CreateGroupWithMembersRequest
+from .groups import (
+    CreateGroupRequest,
+    ShortGroupResponse,
+    CreateGroupWithMembersRequest,
+    GroupResponse,
+)
 from .dialogs import CreateDialogRequest, DialogDetailResponse
 from .sticker import (
     ShortStickerResponse,
