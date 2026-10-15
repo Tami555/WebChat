@@ -140,6 +140,15 @@ async def auth_tokens_user_2(created_user_2):
 
 
 @pytest.fixture
+async def auth_tokens_user_3(created_user_3):
+    """Возвращает JWT токен для авторизованных запросов пользователя-3"""
+    from src.services import AuthService
+
+    tokens = AuthService.create_tokens_by_user(created_user_3)
+    return tokens
+
+
+@pytest.fixture
 async def auth_client_user_1(auth_tokens_user_1):
     """Авторизованный HTTP-клиент пользователь-1"""
     from src.main import app
@@ -165,6 +174,21 @@ async def auth_client_user_2(auth_tokens_user_2):
         base_url="http://test",
         timeout=30.0,
         headers={"Authorization": f"Bearer {auth_tokens_user_2.access_token}"},
+    ) as auth_client:
+        yield auth_client
+
+
+@pytest.fixture
+async def auth_client_user_3(auth_tokens_user_3):
+    """Авторизованный HTTP-клиент пользователь-3"""
+    from src.main import app
+
+    # новый клиент
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        timeout=30.0,
+        headers={"Authorization": f"Bearer {auth_tokens_user_3.access_token}"},
     ) as auth_client:
         yield auth_client
 
@@ -222,11 +246,34 @@ async def created_group_user1_user2_user3(
 
 @pytest.fixture
 async def created_group_user1_user3(test_db, created_user_1, created_user_3):
-    """Создает группу с пользователем 1 (админ) и участником 3"""
+    """Создает ПУБЛИЧНУЮ группу с пользователем 1 (админ) и участником 3"""
     from src.crud.groups import GroupCRUD
     from tests.fixtures.data import GroupsDataFactory
 
     group_data = GroupsDataFactory.group_data()
+    group_data["created_by"] = created_user_1.id
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[created_user_3.id],
+            session=session,
+        )
+        return group
+
+
+@pytest.fixture
+async def created_private_group_user1_user3(test_db, created_user_1, created_user_3):
+    """Создает ПРИВАТНУЮ группу с пользователем 1 (админ) и участником 3"""
+    from src.crud.groups import GroupCRUD
+    from tests.fixtures.data import GroupsDataFactory
+
+    group_data = GroupsDataFactory.group_data(
+        title="Private Group",
+        description="Private group desc",
+        is_private=True,
+    )
     group_data["created_by"] = created_user_1.id
 
     async for session in test_db.create_session():
@@ -286,6 +333,35 @@ async def created_message_in_group_1_2_3(
         created_message = await MessageCRUD.create_message(message, session)
         await GroupCRUD.set_last_message(
             created_group_user1_user2_user3, created_message, session
+        )
+        return created_message
+
+
+@pytest.fixture
+async def created_message_in_private_group(
+    test_db, created_user_1, created_private_group_user1_user3
+):
+    """Создает сообщение с файлом в приватной группе (для проверки media)"""
+    from src.crud import MessageCRUD, GroupCRUD
+    from src.models.messages import Messages
+    from src.schemas.enums import MessageType
+    from tests.fixtures.data import MessagesDataFactory
+
+    message_data = MessagesDataFactory.message_data(
+        content="Message with media",
+        type=MessageType.IMAGE,
+    )
+
+    async for session in test_db.create_session():
+        message = Messages(
+            sender_id=created_user_1.id,
+            group_id=created_private_group_user1_user3.id,
+            file_url="/test/media/image.jpg",
+            **message_data,
+        )
+        created_message = await MessageCRUD.create_message(message, session)
+        await GroupCRUD.set_last_message(
+            created_private_group_user1_user3, created_message, session
         )
         return created_message
 

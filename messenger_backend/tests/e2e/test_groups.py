@@ -18,6 +18,10 @@ class TestGroups:
     get_groups_url = url_builder.groups("chats")
     create_group_url = url_builder.groups("create")
 
+    @staticmethod
+    def get_group_detail_url(group_id):
+        return url_builder.groups(str(group_id))
+
     class TestGetGroups:
         """Тесты получения списка групп"""
 
@@ -430,3 +434,224 @@ class TestGroups:
                     expected_created_by=created_user_1.id,
                 )
                 assert group.is_private is True
+
+    class TestGetGroupDetail:
+        """Тесты получения полной информации о группе"""
+
+        class TestPrivateGroup:
+            """Тесты для приватной группы"""
+
+            @pytest.mark.asyncio
+            async def test_get_private_group_success(
+                self,
+                created_user_1,
+                created_user_3,
+                auth_client_user_1,
+                created_private_group_user1_user3,
+            ):
+                """Тест: получение инфы о приватной группе (админ)"""
+                from src.schemas import GroupResponse
+
+                group_id = created_private_group_user1_user3.id
+                response = await auth_client_user_1.get(
+                    TestGroups.get_group_detail_url(group_id)
+                )
+
+                data = HttpAssertions.assert_success_response(
+                    response=response,
+                    response_model=GroupResponse,
+                )
+
+                assert data.id == group_id
+                assert data.title == "Private Group"
+                assert data.is_private is True
+                assert data.description == "Private group desc"
+
+                # Проверяем участников
+                assert len(data.members) == 2
+
+                # Проверяем роли
+                admin = next(
+                    m for m in data.members if m.username == created_user_1.username
+                )
+                assert admin.role.value == "admin"
+                member = next(
+                    m for m in data.members if m.username == created_user_3.username
+                )
+                assert member.role.value == "member"
+
+                # Проверяем media
+                assert data.media.images == []
+                assert data.media.voices == []
+                assert data.media.files == []
+
+            @pytest.mark.asyncio
+            async def test_get_private_group_success_as_member(
+                self,
+                auth_client_user_3,
+                created_private_group_user1_user3,
+            ):
+                """Тест: участник (member) тоже может получить инфу"""
+                from src.schemas import GroupResponse
+
+                group_id = created_private_group_user1_user3.id
+                response = await auth_client_user_3.get(
+                    TestGroups.get_group_detail_url(group_id)
+                )
+
+                data = HttpAssertions.assert_success_response(
+                    response=response,
+                    response_model=GroupResponse,
+                )
+                assert data.id == group_id
+
+            @pytest.mark.asyncio
+            async def test_get_private_group_not_member(
+                self,
+                auth_client_user_2,
+                created_private_group_user1_user3,
+            ):
+                """Тест: НЕ участник не может получить инфу о приватной группе"""
+                group_id = created_private_group_user1_user3.id
+                response = await auth_client_user_2.get(
+                    TestGroups.get_group_detail_url(group_id)
+                )
+
+                HttpAssertions.assert_error_response(
+                    response=response,
+                    expected_message="Вы не являетесь участником группы",
+                    expected_status=403,
+                )
+
+            @pytest.mark.asyncio
+            async def test_get_private_group_with_media(
+                self,
+                auth_client_user_1,
+                created_private_group_user1_user3,
+                created_message_in_private_group,
+            ):
+                """Тест: получение инфы о группе с медиа-сообщениями"""
+                from src.schemas import GroupResponse
+
+                group_id = created_private_group_user1_user3.id
+                response = await auth_client_user_1.get(
+                    TestGroups.get_group_detail_url(group_id)
+                )
+
+                data = HttpAssertions.assert_success_response(
+                    response=response,
+                    response_model=GroupResponse,
+                )
+
+                assert len(data.media.images) == 1
+                assert data.media.images[0] == "/test/media/image.jpg"
+                assert data.media.voices == []
+                assert data.media.files == []
+
+        class TestPublicGroup:
+            """Тесты для публичной группы"""
+
+            @pytest.mark.asyncio
+            async def test_get_public_group_success_as_member(
+                self,
+                auth_client_user_1,
+                created_group_user1_user3,
+            ):
+                """Тест: участник получает инфу о публичной группе"""
+                from src.schemas import GroupResponse
+
+                group_id = created_group_user1_user3.id
+                response = await auth_client_user_1.get(
+                    TestGroups.get_group_detail_url(group_id)
+                )
+
+                data = HttpAssertions.assert_success_response(
+                    response=response,
+                    response_model=GroupResponse,
+                )
+
+                assert data.id == group_id
+                assert data.is_private is False
+
+            @pytest.mark.asyncio
+            async def test_get_public_group_success_as_non_member(
+                self,
+                auth_client_user_2,
+                created_group_user1_user3,
+            ):
+                """Тест: НЕ участник может получить инфу о публичной группе"""
+                from src.schemas import GroupResponse
+
+                group_id = created_group_user1_user3.id
+                response = await auth_client_user_2.get(
+                    TestGroups.get_group_detail_url(group_id)
+                )
+
+                data = HttpAssertions.assert_success_response(
+                    response=response,
+                    response_model=GroupResponse,
+                )
+                assert data.id == group_id
+                assert data.is_private is False
+
+        class TestCommon:
+            """Общие тесты для типов групп"""
+
+            @pytest.mark.asyncio
+            async def test_get_group_not_exists(
+                self,
+                auth_client_user_1,
+            ):
+                """Тест: получение инфы о несуществующей группе"""
+                from uuid import uuid4
+
+                non_existent_id = uuid4()
+                response = await auth_client_user_1.get(
+                    TestGroups.get_group_detail_url(non_existent_id)
+                )
+                HttpAssertions.assert_not_found_error(
+                    response=response,
+                    expected_message="Группа не найдена",
+                )
+
+            @pytest.mark.asyncio
+            async def test_get_group_invalid_uuid(
+                self,
+                auth_client_user_1,
+            ):
+                """Тест: невалидный UUID в path"""
+                response = await auth_client_user_1.get(
+                    url_builder.groups("not-a-uuid")
+                )
+                HttpAssertions.assert_validation_error(response)
+
+            @pytest.mark.asyncio
+            async def test_get_public_group_success_unauthorized(
+                self,
+                client,
+                created_group_user1_user3,
+            ):
+                """Тест: неавторизованный не может получить инфу (даже о публичной)"""
+                group_id = created_group_user1_user3.id
+                response = await client.get(TestGroups.get_group_detail_url(group_id))
+
+                HttpAssertions.assert_unauthorized_error(
+                    response=response,
+                    expected_message="Вы не авторизованы! Войдите пожалуйста в аккаунт",
+                )
+
+            @pytest.mark.asyncio
+            async def test_get_group_invalid_token(
+                self,
+                client,
+                created_private_group_user1_user3,
+            ):
+                """Тест: невалидный токен"""
+                client.headers["Authorization"] = "Bearer invalid_token"
+                group_id = created_private_group_user1_user3.id
+                response = await client.get(TestGroups.get_group_detail_url(group_id))
+
+                HttpAssertions.assert_unauthorized_error(
+                    response=response,
+                    expected_message="Невалидный токен",
+                )
