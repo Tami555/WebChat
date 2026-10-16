@@ -22,7 +22,6 @@ __all__ = (
     "DeleteMessageFileRequest",
     "ChatResponse",
     "AllChatsResponse",
-    "CreateGroupRequest",
     "ShortGroupResponse",
     "GroupResponse",
     "CreateGroupWithMembersRequest",
@@ -74,7 +73,6 @@ from .files import (
 )
 from .chats import ChatResponse, AllChatsResponse
 from .groups import (
-    CreateGroupRequest,
     ShortGroupResponse,
     CreateGroupWithMembersRequest,
     GroupResponse,

@@ -13,6 +13,15 @@ class NotCorrectMessageTypeForFileTypeError(BaseAppException):
         )
 
 
+class InvalidAvatarFileError(BaseAppException):
+    """Невалидный файл аватара"""
+    def __init__(self, content_type: str):
+        super().__init__(
+            message=f"Аватар должен быть изображением, получен: {content_type}",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+
 class FilePathNotFoundError(BaseAppException):
     """Файл не найден"""
 

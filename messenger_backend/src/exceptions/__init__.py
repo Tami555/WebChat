@@ -20,6 +20,7 @@ __all__ = (
     "DialogNotFoundError",
     "UserIsNotDialogInterlocutorError",
     "NotCorrectMessageTypeForFileTypeError",
+    "InvalidAvatarFileError",
     "FilePathNotFoundError",
     "MissedDataForMessageTypeError",
     "MessageNotFoundError",
@@ -56,7 +57,7 @@ from .errors.dialogs import (
     DialogNotFoundError,
     UserIsNotDialogInterlocutorError,
 )
-from .errors.files import NotCorrectMessageTypeForFileTypeError, FilePathNotFoundError
+from .errors.files import NotCorrectMessageTypeForFileTypeError, InvalidAvatarFileError, FilePathNotFoundError
 from .errors.messages import (
     MissedDataForMessageTypeError,
     MessageNotFoundError,

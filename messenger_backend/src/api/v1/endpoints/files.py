@@ -10,7 +10,7 @@ from src.schemas import (
     DownloadMessageFileRequest,
     DeleteMessageFileRequest,
 )
-from src.services import FileService
+from src.services import MessageService
 
 router = APIRouter()
 
@@ -25,7 +25,7 @@ async def upload_message_file(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Загрузка файла сообщения"""
-    save_file_url = await FileService.upload_message_file(
+    save_file_url = await MessageService.upload_message_file(
         upload_data=upload_data,
         upload_file=upload_file,
         user=user,
@@ -41,7 +41,7 @@ async def download_message_file(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Скачивание файла сообщения"""
-    content, content_type, filename = await FileService.download_message_file(
+    content, content_type, filename = await MessageService.download_message_file(
         download_data=download_data,
         user=user,
         session=session,
@@ -61,7 +61,7 @@ async def delete_message_file(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Удаление файла сообщения"""
-    deleted = await FileService.delete_message_file(
+    deleted = await MessageService.delete_message_file(
         delete_data=delete_data,
         user=user,
         session=session,

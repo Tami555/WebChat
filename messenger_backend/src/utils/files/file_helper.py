@@ -30,13 +30,6 @@ class FilePathHelper:
         return file_path
 
     @staticmethod
-    def extract_filename_from_message_file_path(file_path: Path) -> str:
-        """Извлекает имя файла из полного пути файла сообщения"""
-        filename = Path(file_path).name
-        artifacts = str(filename).split("_")
-        return "".join(artifacts[1:])
-
-    @staticmethod
     def generate_sticker_file_path(
         sticker_id: UUID,
         pack_id: UUID,
@@ -50,27 +43,22 @@ class FilePathHelper:
         return file_path
 
     @staticmethod
-    def generate_avatar_file_path(user_id: UUID, filename: str) -> Path:
-        """
-        Генерирует путь для аватарки пользователя
-        Структура: avatars/{user_id}_{filename}
-        """
-        file_path = Path("avatars") / f"{user_id}_{filename}"
-        return file_path
+    def generate_user_avatar_path(user_id: UUID, filename: str) -> Path:
+        """Путь для авы пользователя: avatars/users/{user_id}_{filename}"""
+        return Path("avatars") / "users" / f"{user_id}_{filename}"
 
     @staticmethod
-    def generate_chat_avatar_file_path(
-        chat_id: UUID,
-        chat_type: ChatType,
-        filename: str,
-    ) -> Path:
-        """
-        Генерирует путь для аватарки чата
-        Структура: chat_avatars/{chat_type}/{chat_id}_{filename}
-        """
-        file_path = Path("chat_avatars") / f"{str(chat_type)}" / f"{chat_id}_{filename}"
-        return file_path
+    def generate_group_avatar_path(group_id: UUID, filename: str) -> Path:
+        """Путь для авы группы: avatars/groups/{group_id}_{filename}"""
+        return Path("avatars") / "groups" / f"{group_id}_{filename}"
 
+    @staticmethod
+    def extract_filename_from_message_file_path(file_path: Path) -> str:
+        """Извлекает имя файла из полного пути файла сообщения"""
+        filename = Path(file_path).name
+        artifacts = str(filename).split("_")
+        return "".join(artifacts[1:])
+    
     @staticmethod
     def ensure_directory_exists(file_path: Path) -> None:
         """Создает директорию для файла, если её нет"""
@@ -102,6 +90,11 @@ def get_file_type_for_message(file_content_type: str) -> MessageType | None:
 
         case _:
             return None
+
+
+def is_image_file(content_type: str) -> bool:
+    """Проверяет, что файл — изображение"""
+    return content_type.strip().lower().startswith("image/")
 
 
 def get_content_type_by_extension(extension: str) -> str:

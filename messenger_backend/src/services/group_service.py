@@ -1,4 +1,5 @@
 from uuid import UUID
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Groups, Messages
@@ -17,6 +18,7 @@ from src.exceptions import (
     GroupNotFoundError,
     UserIsNotGroupMemberError,
 )
+from src.services.file_service import FileService
 
 
 class GroupService:
@@ -79,10 +81,11 @@ class GroupService:
     async def create_group(
         creator: Users,
         create_group_data: CreateGroupWithMembersRequest,
+        avatar: UploadFile | None,
         session: AsyncSession,
     ) -> Groups:
         """Создание группы с участниками"""
-        group_data = create_group_data.group.model_dump()
+        group_data = create_group_data.model_dump(exclude={"members"})
         group_data["created_by"] = creator.id
 
         # проверка, что создателя нет в участниках
@@ -95,12 +98,25 @@ class GroupService:
         if not await UserCRUD.check_users_exist(session, create_group_data.members):
             raise UserNotFoundError()
 
-        return await GroupCRUD.create_group(
+        new_group = await GroupCRUD.create_group(
             creator_id=creator.id,
             group_data=group_data,
             members_list=create_group_data.members,
             session=session,
         )
+
+        # Сохраняем аву, если передана
+        if avatar is not None:
+            saved_url = await FileService.upload_group_avatar(
+                group_id=new_group.id,
+                avatar=avatar,
+            )
+            new_group = await GroupCRUD.update_group_avatar_url(
+                group=new_group,
+                avatar_url=saved_url,
+                session=session,
+            )
+        return new_group
 
     @staticmethod
     async def update_group_last_message(

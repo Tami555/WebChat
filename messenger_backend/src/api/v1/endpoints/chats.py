@@ -6,13 +6,8 @@ from fastapi import APIRouter, Depends, Query, UploadFile
 import src.api.v1.dependencies as dependencies
 from src.core.database import database_helper
 from src.models import Users
-from src.schemas import (
-    AllChatsResponse,
-    MessageResponse,
-    MessageCreateRequest,
-    UploadMessageFileRequest,
-)
-from src.services import GroupService, DialogService, MessageService, FileService
+from src.schemas import AllChatsResponse, MessageResponse, MessageCreateRequest
+from src.services import GroupService, DialogService, MessageService
 from src.schemas.enums import ChatType
 
 router = APIRouter()
@@ -59,19 +54,10 @@ async def create_message(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Создание сообщения (для разработки)"""
-    if message_file is not None:
-        save_file_url = await FileService.upload_message_file(
-            upload_data=UploadMessageFileRequest(
-                chat_id=message_data.chat_id,
-                chat_type=message_data.chat_type,
-                file_type=message_data.message_type,
-            ),
-            upload_file=message_file,
-            user=user,
-            session=session,
-        )
-        message_data.file_url = save_file_url
-    new_message = await MessageService.create_message(
-        user=user, session=session, message_data=message_data
+    new_message = await MessageService.create_message_for_developers(
+        message_data=message_data,
+        message_file=message_file,
+        user=user,
+        session=session,
     )
     return {"status": "created", "message_id": new_message.id}

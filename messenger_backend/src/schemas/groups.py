@@ -1,24 +1,30 @@
 import datetime
 from uuid import UUID
 from pydantic import BaseModel, ConfigDict
+from fastapi import Form
 
 from src.schemas import UserInGroupResponse, MediaMessagesResponse
-
-
-class CreateGroupRequest(BaseModel):
-    """Схема создания группы"""
-
-    title: str
-    description: str | None = None
-    avatar_url: str | None = None
-    is_private: bool
 
 
 class CreateGroupWithMembersRequest(BaseModel):
     """Схема создания группы с участниками"""
 
-    group: CreateGroupRequest
+    title: str
+    description: str | None = None
+    is_private: bool
     members: list[UUID]
+
+    @staticmethod
+    def create_group_by_form(
+        title: str = Form(...),
+        description: str | None = Form(...),
+        is_private: bool = Form(...),
+        members: list[UUID] = Form(...),
+    ) -> "CreateGroupWithMembersRequest":
+
+        return CreateGroupWithMembersRequest(
+            title=title, description=description, is_private=is_private, members=members
+        )
 
 
 class ShortGroupResponse(BaseModel):

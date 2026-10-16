@@ -1,4 +1,4 @@
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -105,3 +105,16 @@ class GroupCRUD:
         )
         messages = await session.execute(stmt)
         return list(messages.all())
+
+    @staticmethod
+    async def update_group_avatar_url(
+        group: Groups,
+        avatar_url: str | None,
+        session: AsyncSession,
+    ) -> Groups:
+        """Обновление url-аватарки группы через ORM-объект"""
+        group.avatar_url = avatar_url
+        session.add(group)
+        await session.commit()
+        await session.refresh(group)
+        return group

@@ -1,5 +1,6 @@
 __all__ = (
     "get_file_type_for_message",
+    "is_image_file",
     "get_content_type_by_extension",
     "FilePathHelper",
     "FileManager",
@@ -9,6 +10,7 @@ __all__ = (
 
 from .file_helper import (
     get_file_type_for_message,
+    is_image_file,
     get_content_type_by_extension,
     FilePathHelper,
 )

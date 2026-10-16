@@ -1,12 +1,22 @@
 import datetime
 from uuid import UUID
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services import DialogService, GroupService, StickerService
+from src.services.dialog_service import DialogService
+from src.services.group_service import GroupService
+from src.services.sticker_service import StickerService
+from src.services.file_service import FileService
+
 from src.crud import MessageCRUD
 from src.models import Messages, Users
 from src.schemas.enums import ChatType, MessageType
-from src.schemas import MessageCreateRequest
+from src.schemas import (
+    MessageCreateRequest,
+    UploadMessageFileRequest,
+    DownloadMessageFileRequest,
+    DeleteMessageFileRequest,
+)
 from src.exceptions import (
     MissedDataForMessageTypeError,
     MessageNotFoundError,
@@ -81,6 +91,55 @@ class MessageService:
                 group_id=chat_id, session=session
             )
         return set()
+
+    @staticmethod
+    async def upload_message_file(
+        upload_data: UploadMessageFileRequest,
+        upload_file: UploadFile,
+        user: Users,
+        session: AsyncSession,
+    ) -> str:
+        """Сохранение файла сообщения"""
+        # Проверка, что пользователь - участник
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=upload_data.chat_id,
+            chat_type=upload_data.chat_type,
+            session=session,
+        )
+        return await FileService.upload_message_file(
+            upload_data, upload_file, user.username
+        )
+
+    @staticmethod
+    async def download_message_file(
+        download_data: DownloadMessageFileRequest,
+        user: Users,
+        session: AsyncSession,
+    ) -> tuple[bytes, str, str]:
+        """Скачивание файла сообщения"""
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=download_data.chat_id,
+            chat_type=download_data.chat_type,
+            session=session,
+        )
+        return await FileService.download_message_file(download_data)
+
+    @staticmethod
+    async def delete_message_file(
+        delete_data: DeleteMessageFileRequest,
+        user: Users,
+        session: AsyncSession,
+    ) -> bool:
+        """Удаление файла сообщения"""
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=delete_data.chat_id,
+            chat_type=delete_data.chat_type,
+            session=session,
+        )
+        return await FileService.delete_message_file(delete_data)
 
     @staticmethod
     async def create_message(
@@ -197,3 +256,30 @@ class MessageService:
             read_at=read_at,
             session=session,
         )
+
+    @staticmethod
+    async def create_message_for_developers(
+        user: Users,
+        session: AsyncSession,
+        message_data: MessageCreateRequest,
+        message_file: UploadFile | None = None,
+    ) -> Messages:
+        """Создание сообщения в чате для разработчиков (полностью http)"""
+        # Сохраняем файл сообщения, если он есть
+        if message_file is not None:
+            save_file_url = await MessageService.upload_message_file(
+                upload_data=UploadMessageFileRequest(
+                    chat_id=message_data.chat_id,
+                    chat_type=message_data.chat_type,
+                    file_type=message_data.message_type,
+                ),
+                upload_file=message_file,
+                user=user,
+                session=session,
+            )
+            message_data.file_url = save_file_url
+
+        new_message = await MessageService.create_message(
+            user=user, session=session, message_data=message_data
+        )
+        return new_message

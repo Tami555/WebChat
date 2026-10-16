@@ -1,6 +1,6 @@
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, UploadFile
 
 import src.api.v1.dependencies as dependencies
 from src.core.database import database_helper
@@ -27,7 +27,10 @@ async def get_group_chats(
 
 @router.post("/create", response_model=ShortGroupResponse)
 async def create_group(
-    data: CreateGroupWithMembersRequest,
+    data: CreateGroupWithMembersRequest = Depends(
+        CreateGroupWithMembersRequest.create_group_by_form
+    ),
+    avatar: UploadFile | None = None,
     user: Users = Depends(dependencies.get_current_user),
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
@@ -35,6 +38,7 @@ async def create_group(
     new_group = await GroupService.create_group(
         creator=user,
         create_group_data=data,
+        avatar=avatar,
         session=session,
     )
     return new_group
