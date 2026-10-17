@@ -25,3 +25,18 @@ class GroupsDataFactory:
         defaults = GroupsDataFactory.group_data()
         defaults.update(kwargs)
         return defaults
+
+    @staticmethod
+    def group_form_data(
+        title: str = "Test Group",
+        description: str | None = "Test group description",
+        is_private: bool = False,
+        members: list[str] | None = None,
+    ) -> Dict[str, Any]:
+        """Данные для группы в формате multipart/form-data"""
+        return {
+            "title": title,
+            "description": description or "",
+            "is_private": str(is_private).lower(),  # "true"/"false"
+            "members": members or [],
+        }

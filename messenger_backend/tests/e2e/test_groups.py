@@ -9,6 +9,7 @@ from src.models.group_members import GroupMembers
 from tests.helpers.assertions import HttpAssertions, GroupDatabaseAssertions
 from tests.helpers.url_builder import url_builder
 from tests.fixtures.data import UserDataFactory, GroupsDataFactory
+from tests.helpers.factories import FileFactory
 
 
 class TestGroups:
@@ -139,18 +140,16 @@ class TestGroups:
             created_user_3,
             test_db,
         ):
-            """Тест: успешное создание группы с участниками"""
+            """Тест: успешное создание группы с участниками (без аватарки)"""
             members = [created_user_2.id, created_user_3.id]
-            data = {
-                "group": GroupsDataFactory.create_group_custom(
-                    created_at=str(datetime.now())
-                ),
-                "members": [str(m) for m in members],
-            }
+
+            data = GroupsDataFactory.group_form_data(
+                members=[str(m) for m in members],
+            )
 
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             group_data = HttpAssertions.assert_success_response(
@@ -162,7 +161,6 @@ class TestGroups:
             assert group_data.title == "Test Group"
             assert group_data.is_private is False
 
-            # Проверяем, что группа появилась в БД
             async for session in test_db.create_session():
                 group = await GroupDatabaseAssertions.assert_group_exists(
                     session=session,
@@ -170,7 +168,8 @@ class TestGroups:
                     expected_title="Test Group",
                     expected_created_by=created_user_1.id,
                 )
-                # Проверяем, что все участники добавлены
+                assert group.avatar_url is None
+
                 all_members = [created_user_1.id] + members
                 for user_id in all_members:
                     await GroupDatabaseAssertions.assert_member_in_group(
@@ -185,16 +184,15 @@ class TestGroups:
             created_user_2,
         ):
             """Тест: создание группы, где создатель указан в участниках"""
-            data = {
-                "group": GroupsDataFactory.create_group_custom(
-                    created_at=str(datetime.now())
-                ),
-                "members": [str(created_user_1.id), str(created_user_2.id)],
-            }
+            data = GroupsDataFactory.group_form_data(
+                members=[str(created_user_1.id), str(created_user_2.id)],
+            )
+
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
+
             HttpAssertions.assert_error_response(
                 response=response,
                 expected_message="Создатель группы не может указываться в качестве участника, т.к он по умолчанию является Админом",
@@ -209,20 +207,17 @@ class TestGroups:
             created_user_3,
         ):
             """Тест: создание группы с повторяющимися участниками"""
-            data = {
-                "group": GroupsDataFactory.create_group_custom(
-                    created_at=str(datetime.now())
-                ),
-                "members": [
+            data = GroupsDataFactory.group_form_data(
+                members=[
                     str(created_user_2.id),
                     str(created_user_3.id),
                     str(created_user_2.id),
                 ],
-            }
+            )
 
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             HttpAssertions.assert_error_response(
@@ -239,16 +234,13 @@ class TestGroups:
         ):
             """Тест: создание группы с несуществующим пользователем"""
             non_existent_id = uuid4()
-            data = {
-                "group": GroupsDataFactory.create_group_custom(
-                    created_at=str(datetime.now())
-                ),
-                "members": [str(created_user_2.id), str(non_existent_id)],
-            }
+            data = GroupsDataFactory.group_form_data(
+                members=[str(created_user_2.id), str(non_existent_id)],
+            )
 
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             HttpAssertions.assert_not_found_error(
@@ -264,16 +256,13 @@ class TestGroups:
             created_user_3,
         ):
             """Тест: создание группы без авторизации"""
-            data = {
-                "group": GroupsDataFactory.create_group_custom(
-                    created_at=str(datetime.now())
-                ),
-                "members": [str(created_user_2.id), str(created_user_3.id)],
-            }
+            data = GroupsDataFactory.group_form_data(
+                members=[str(created_user_2.id), str(created_user_3.id)],
+            )
 
             response = await client.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             HttpAssertions.assert_unauthorized_error(
@@ -288,21 +277,15 @@ class TestGroups:
             created_user_2,
             created_user_3,
         ):
-            """
-            Тест: создание группы с невалидным токеном"""
+            """Тест: создание группы с невалидным токеном"""
             client.headers["Authorization"] = "Bearer invalid_token"
-            data = {
-                "group": {
-                    "title": "Test Group",
-                    "description": "Test group description",
-                    "is_private": False,
-                },
-                "members": [str(created_user_2.id), str(created_user_3.id)],
-            }
+            data = GroupsDataFactory.group_form_data(
+                members=[str(created_user_2.id), str(created_user_3.id)],
+            )
 
             response = await client.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             HttpAssertions.assert_unauthorized_error(
@@ -317,21 +300,16 @@ class TestGroups:
             created_user_2,
             created_user_3,
         ):
-            """
-            Тест: создание группы без заголовка
-            Ожидается: ошибка 422
-            """
+            """Тест: создание группы без заголовка (422)"""
             data = {
-                "group": {
-                    "description": "Test group description",
-                    "is_private": False,
-                },
+                "description": "Test group description",
+                "is_private": "false",
                 "members": [str(created_user_2.id), str(created_user_3.id)],
             }
 
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
             HttpAssertions.assert_validation_error(response)
 
@@ -339,19 +317,12 @@ class TestGroups:
         async def test_create_group_missing_members_success(
             self, auth_client_user_1, created_user_1, test_db
         ):
-            """
-            Тест: создание группы без участников
-            Ожидается успех
-            """
-            data = {
-                "group": GroupsDataFactory.create_group_custom(
-                    created_at=str(datetime.now())
-                ),
-                "members": [],
-            }
+            """Тест: создание группы без участников — успех"""
+            data = GroupsDataFactory.group_form_data(members=[])
+
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             group_data = HttpAssertions.assert_success_response(
@@ -359,7 +330,6 @@ class TestGroups:
                 response_model=ShortGroupResponse,
             )
 
-            # Проверяем, что группа появилась в БД
             async for session in test_db.create_session():
                 await GroupDatabaseAssertions.assert_group_exists(
                     session=session,
@@ -373,19 +343,14 @@ class TestGroups:
             self,
             auth_client_user_1,
         ):
-            """Тест: создание группы с неверным типом members"""
-            data = {
-                "group": {
-                    "title": "Test Group",
-                    "description": "Test group description",
-                    "is_private": False,
-                },
-                "members": ["username"],
-            }
+            """Тест: создание группы с невалидным UUID в members"""
+            data = GroupsDataFactory.group_form_data(
+                members=["not-a-uuid"],
+            )
 
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             HttpAssertions.assert_validation_error(
@@ -403,18 +368,15 @@ class TestGroups:
             test_db,
         ):
             """Тест: создание приватной группы"""
-            data = {
-                "group": GroupsDataFactory.create_group_custom(
-                    is_private=True,
-                    title="Private Group",
-                    created_at=str(datetime.now()),
-                ),
-                "members": [str(created_user_2.id), str(created_user_3.id)],
-            }
+            data = GroupsDataFactory.group_form_data(
+                title="Private Group",
+                is_private=True,
+                members=[str(created_user_2.id), str(created_user_3.id)],
+            )
 
             response = await auth_client_user_1.post(
                 TestGroups.create_group_url,
-                json=data,
+                data=data,
             )
 
             group_data = HttpAssertions.assert_success_response(
@@ -434,6 +396,72 @@ class TestGroups:
                     expected_created_by=created_user_1.id,
                 )
                 assert group.is_private is True
+
+        @pytest.mark.asyncio
+        async def test_create_group_with_avatar_success(
+            self,
+            created_user_1,
+            auth_client_user_1,
+            created_user_2,
+            test_image_file,
+            test_db,
+        ):
+            """Тест: создание группы с аватаркой"""
+            data = GroupsDataFactory.group_form_data(
+                members=[str(created_user_2.id)],
+            )
+
+            with open(test_image_file, "rb") as f:
+                files = {"avatar": ("avatar.jpg", f, "image/jpeg")}
+                response = await auth_client_user_1.post(
+                    TestGroups.create_group_url,
+                    data=data,
+                    files=files,
+                )
+
+            group_data = HttpAssertions.assert_success_response(
+                response=response,
+                response_model=ShortGroupResponse,
+            )
+
+            # Проверяем, что ава сохранена в БД
+            async for session in test_db.create_session():
+                group = await GroupDatabaseAssertions.assert_group_exists(
+                    session=session,
+                    group_id=group_data.id,
+                    expected_title="Test Group",
+                    expected_created_by=created_user_1.id,
+                )
+                assert group.avatar_url is not None
+
+            # Очищаем сохранённый файл
+            FileFactory.cleanup_group_avatar(group_data.id)
+
+        @pytest.mark.asyncio
+        async def test_create_group_with_invalid_avatar(
+            self,
+            auth_client_user_1,
+            created_user_2,
+            test_text_file,
+        ):
+            """Тест: создание группы с невалидной аватаркой (не картинка)"""
+            data = GroupsDataFactory.group_form_data(
+                members=[str(created_user_2.id)],
+            )
+
+            with open(test_text_file, "rb") as f:
+                files = {"avatar": ("file.txt", f, "text/plain")}
+                response = await auth_client_user_1.post(
+                    TestGroups.create_group_url,
+                    data=data,
+                    files=files,
+                )
+
+            HttpAssertions.assert_error_response(
+                response=response,
+                expected_message="Аватар должен быть изображением, получен: text/plain",
+                expected_status=415,
+            )
 
     class TestGetGroupDetail:
         """Тесты получения полной информации о группе"""

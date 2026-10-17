@@ -68,10 +68,32 @@ class FileFactory:
     def cleanup_test_messages_files(chat_id: UUID):
         """Удаляет тестовые файлы после тестов"""
         import shutil
-        from pathlib import Path
 
-        BASE_PATH = Path(__file__).parent.parent.parent / "test_media"
-        FILES_PATH = BASE_PATH / "user_files" / "chats" / str(chat_id)
+        file_path = Path("test_media") / "user_files" / "chats" / str(chat_id)
 
-        if FILES_PATH.exists():
-            shutil.rmtree(FILES_PATH)
+        if file_path.exists():
+            shutil.rmtree(file_path)
+
+    @staticmethod
+    def cleanup_group_avatar(group_id: UUID) -> None:
+        """Удаляет аватарку группы после тестов"""
+
+        base_path = Path("test_media") / "avatars" / "groups"
+        if not base_path.exists():
+            return
+
+        for file in base_path.iterdir():
+            if file.name.startswith(str(group_id)):
+                file.unlink()
+
+    @staticmethod
+    def cleanup_user_avatar(user_id: UUID) -> None:
+        """Удаляет аватарку пользователя после тестов"""
+
+        base_path = Path("test_media") / "avatars" / "users"
+        if not base_path.exists():
+            return
+
+        for file in base_path.iterdir():
+            if file.name.startswith(str(user_id)):
+                file.unlink()

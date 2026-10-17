@@ -17,9 +17,9 @@ class CreateGroupWithMembersRequest(BaseModel):
     @staticmethod
     def create_group_by_form(
         title: str = Form(...),
-        description: str | None = Form(...),
+        description: str | None = Form(default=None),
         is_private: bool = Form(...),
-        members: list[UUID] = Form(...),
+        members: list[UUID] = Form(default=[]),
     ) -> "CreateGroupWithMembersRequest":
 
         return CreateGroupWithMembersRequest(
