@@ -23,6 +23,10 @@ class TestGroups:
     def get_group_detail_url(group_id):
         return url_builder.groups(str(group_id))
 
+    @staticmethod
+    def update_group_url(group_id):
+        return url_builder.groups(str(group_id))
+
     class TestGetGroups:
         """Тесты получения списка групп"""
 
@@ -683,3 +687,140 @@ class TestGroups:
                     response=response,
                     expected_message="Невалидный токен",
                 )
+
+    class TestUpdateGroup:
+        """Тесты редактирования информации о группе"""
+
+        @pytest.mark.asyncio
+        async def test_update_title_only_success(
+            self,
+            auth_client_user_1,
+            created_group_user1_user2_user3,
+            test_db,
+        ):
+            """Тест: обновление только названия"""
+            group_id = created_group_user1_user2_user3.id
+            data = GroupsDataFactory.update_group_json(title="New Title Only")
+
+            response = await auth_client_user_1.patch(
+                TestGroups.update_group_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_group_updated(
+                    session=session,
+                    group_id=group_id,
+                    expected_title="New Title Only",
+                    expected_description="Test group description",
+                    expected_is_private=False,
+                )
+
+        @pytest.mark.asyncio
+        async def test_update_all_fields_success(
+            self,
+            auth_client_user_1,
+            created_group_user1_user2_user3,
+            test_db,
+        ):
+            """Тест: обновление всех полей группы"""
+            group_id = created_group_user1_user2_user3.id
+            data = GroupsDataFactory.update_group_json(
+                title="Totally New",
+                description="New Description",
+                is_private=True,
+            )
+
+            response = await auth_client_user_1.patch(
+                TestGroups.update_group_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_group_updated(
+                    session=session,
+                    group_id=group_id,
+                    expected_title="Totally New",
+                    expected_description="New Description",
+                    expected_is_private=True,
+                )
+
+        @pytest.mark.asyncio
+        async def test_update_empty_title(
+            self,
+            auth_client_user_1,
+            created_group_user1_user2_user3,
+        ):
+            """Тест: попытка установить пустое название"""
+            group_id = created_group_user1_user2_user3.id
+            data = GroupsDataFactory.update_group_json(title="   ")
+
+            response = await auth_client_user_1.patch(
+                TestGroups.update_group_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_validation_error(response)
+
+        @pytest.mark.asyncio
+        async def test_update_not_admin(
+            self,
+            auth_client_user_2,
+            created_group_user1_user2_user3,
+        ):
+            """Тест: попытка обновить группу не админом (1 - админ, 2 - участник)"""
+            group_id = created_group_user1_user2_user3.id
+            data = GroupsDataFactory.update_group_json(title="Hacked")
+
+            response = await auth_client_user_2.patch(
+                TestGroups.update_group_url(group_id),
+                json=data,
+            )
+
+            HttpAssertions.assert_error_response(
+                response=response,
+                expected_message="Только администратор группы может выполнять это действие",
+                expected_status=403,
+            )
+
+        @pytest.mark.asyncio
+        async def test_update_group_not_found(
+            self,
+            auth_client_user_1,
+        ):
+            """Тест: обновление несуществующей группы"""
+            from uuid import uuid4
+
+            non_existent_id = uuid4()
+            data = GroupsDataFactory.update_group_json(title="Ghost")
+
+            response = await auth_client_user_1.patch(
+                TestGroups.update_group_url(non_existent_id),
+                json=data,
+            )
+
+            HttpAssertions.assert_not_found_error(
+                response=response,
+                expected_message="Группа не найдена",
+            )
+
+        @pytest.mark.asyncio
+        async def test_update_unauthorized(
+            self,
+            client,
+            created_group_user1_user2_user3,
+        ):
+            """Тест: обновление без авторизации -> 401"""
+            group_id = created_group_user1_user2_user3.id
+            data = GroupsDataFactory.update_group_json(title="Anon")
+
+            response = await client.patch(
+                TestGroups.update_group_url(group_id),
+                json=data,
+            )
+
+            HttpAssertions.assert_unauthorized_error(
+                response=response,
+                expected_message="Вы не авторизованы! Войдите пожалуйста в аккаунт",
+            )

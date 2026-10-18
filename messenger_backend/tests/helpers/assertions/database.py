@@ -190,3 +190,34 @@ class GroupDatabaseAssertions:
         """Проверяет, последнее сообщение в группе по его id"""
         group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
         assert group.last_message_id == last_message_id
+
+    @staticmethod
+    async def assert_group_updated(
+        session: AsyncSession,
+        group_id: UUID,
+        expected_title: str | None = None,
+        expected_description: str | None = None,
+        expected_is_private: bool | None = None,
+    ):
+        """Проверяет, что поля группы обновились"""
+        group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
+
+        if expected_title is not None:
+            assert group.title == expected_title
+        if expected_description is not None:
+            assert group.description == expected_description
+        if expected_is_private is not None:
+            assert group.is_private == expected_is_private
+
+        return group
+
+    @staticmethod
+    async def assert_group_avatar_url(
+        session: AsyncSession,
+        group_id: UUID,
+        expected_url: str | None,
+    ):
+        """Проверяет URL авы группы (None если авы нет)"""
+        group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
+        assert group.avatar_url == expected_url
+        return group

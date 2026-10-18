@@ -40,3 +40,19 @@ class GroupsDataFactory:
             "is_private": str(is_private).lower(),  # "true"/"false"
             "members": members or [],
         }
+
+    @staticmethod
+    def update_group_json(
+        title: str | None = None,
+        description: str | None = None,
+        is_private: bool | None = None,
+    ) -> Dict[str, Any]:
+        """Данные для редактирования группы. Включает только переданные поля."""
+        data = {}
+        if title is not None:
+            data["title"] = title
+        if description is not None:
+            data["description"] = description
+        if is_private is not None:
+            data["is_private"] = is_private
+        return data
