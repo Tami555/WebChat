@@ -15,6 +15,7 @@ __all__ = (
     "RecurringMembersError",
     "GroupNotFoundError",
     "UserIsNotGroupMemberError",
+    "UserIsNotGroupAdminError",
     "DialogAlreadyExistsError",
     "DialogWithOneUserError",
     "DialogNotFoundError",
@@ -50,6 +51,7 @@ from .errors.groups import (
     RecurringMembersError,
     GroupNotFoundError,
     UserIsNotGroupMemberError,
+    UserIsNotGroupAdminError,
 )
 from .errors.dialogs import (
     DialogAlreadyExistsError,
@@ -57,7 +59,11 @@ from .errors.dialogs import (
     DialogNotFoundError,
     UserIsNotDialogInterlocutorError,
 )
-from .errors.files import NotCorrectMessageTypeForFileTypeError, InvalidAvatarFileError, FilePathNotFoundError
+from .errors.files import (
+    NotCorrectMessageTypeForFileTypeError,
+    InvalidAvatarFileError,
+    FilePathNotFoundError,
+)
 from .errors.messages import (
     MissedDataForMessageTypeError,
     MessageNotFoundError,

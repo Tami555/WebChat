@@ -9,6 +9,7 @@ from src.schemas import (
     CreateGroupWithMembersRequest,
     GroupResponse,
     UserInGroupResponse,
+    UpdateGroupRequest,
 )
 from src.schemas.enums import MessageType
 from src.exceptions import (
@@ -17,6 +18,7 @@ from src.exceptions import (
     UserNotFoundError,
     GroupNotFoundError,
     UserIsNotGroupMemberError,
+    UserIsNotGroupAdminError,
 )
 from src.services.file_service import FileService
 
@@ -173,8 +175,67 @@ class GroupService:
             media=media_files,
         )
 
+    @staticmethod
+    async def update_group_info(
+        user: Users,
+        group_id: UUID,
+        update_data: UpdateGroupRequest,
+        session: AsyncSession,
+    ) -> Groups:
+        """Обновление текстовой информации о группе"""
+        group = await GroupService.get_group_by_id(group_id, session)
+        is_admin = await GroupCRUD.check_admin_group(group_id, user.id, session)
+        if not is_admin:
+            raise UserIsNotGroupAdminError()
+
+        update_dict = update_data.model_dump(exclude_unset=True)
+        if not update_dict:
+            return group
+
+        return await GroupCRUD.update_group(group, update_dict, session)
+
+    @staticmethod
+    async def update_group_avatar(
+        user: Users,
+        group_id: UUID,
+        avatar: UploadFile,
+        session: AsyncSession,
+    ) -> Groups:
+        """Обновление или удаление аватарки группы"""
+        group = await GroupService.get_group_by_id(group_id, session)
+
+        is_admin = await GroupCRUD.check_admin_group(group_id, user.id, session)
+        if not is_admin:
+            raise UserIsNotGroupAdminError()
+
+        # Удаляем старую, сохраняем новую
+        if group.avatar_url:
+            await FileService.delete_group_avatar(group.avatar_url)
+        avatar_group = await FileService.upload_group_avatar(
+            group_id=group.id,
+            avatar=avatar,
+        )
+        return await GroupCRUD.update_group_avatar_url(group, avatar_group, session)
+
+    @staticmethod
+    async def delete_group_avatar(
+        user: Users,
+        group_id: UUID,
+        session: AsyncSession,
+    ) -> Groups:
+        """Удаление аватарки группы"""
+        group = await GroupService.get_group_by_id(group_id, session)
+
+        is_admin = await GroupCRUD.check_admin_group(group_id, user.id, session)
+        if not is_admin:
+            raise UserIsNotGroupAdminError()
+
+        if group.avatar_url:
+            await FileService.delete_group_avatar(group.avatar_url)
+            group = await GroupCRUD.update_group_avatar_url(group, None, session)
+        return group
+
     # TODO:
     # Добавление/удаление пользователей из группы
     # Изменение роли пользователя
-    # Редактирование группы (название, ава, т.д)
     # Удаление группы

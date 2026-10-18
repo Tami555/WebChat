@@ -118,3 +118,31 @@ class GroupCRUD:
         await session.commit()
         await session.refresh(group)
         return group
+
+    @staticmethod
+    async def update_group(
+        group: Groups,
+        update_data: dict,
+        session: AsyncSession,
+    ) -> Groups:
+        """Обновление полей группы в БД"""
+        for field, value in update_data.items():
+            setattr(group, field, value)
+
+        session.add(group)
+        await session.commit()
+        await session.refresh(group)
+        return group
+
+    @staticmethod
+    async def check_admin_group(
+        group_id: UUID, user_id: UUID, session: AsyncSession
+    ) -> bool:
+        """Проверка, является ли пользователь админом группы"""
+        stmt = select(GroupMembers).where(
+            GroupMembers.group_id == group_id,
+            GroupMembers.user_id == user_id,
+            GroupMembers.role == GroupMemberRole.ADMIN,
+        )
+        member = await session.execute(stmt)
+        return member.scalar_one_or_none() is not None

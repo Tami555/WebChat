@@ -10,6 +10,7 @@ from src.schemas import (
     GroupResponse,
     CreateGroupWithMembersRequest,
     ChatResponse,
+    UpdateGroupRequest,
 )
 from src.services import GroupService
 
@@ -52,3 +53,19 @@ async def get_group_by_id(
 ) -> GroupResponse:
     """Получить полную информацию о группе по id"""
     return await GroupService.get_group_detail(user.id, group_id, session)
+
+
+@router.patch("/{group_id}", response_model=ShortGroupResponse)
+async def update_group_info(
+    group_id: UUID,
+    data: UpdateGroupRequest,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Редактировать название, описание и приватность группы (только админ)"""
+    return await GroupService.update_group_info(
+        user=user,
+        group_id=group_id,
+        update_data=data,
+        session=session,
+    )

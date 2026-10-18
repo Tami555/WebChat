@@ -51,3 +51,13 @@ class UserIsNotGroupMemberError(BaseAppException):
             message="Вы не являетесь участником группы",
             status_code=status.HTTP_403_FORBIDDEN,
         )
+
+
+class UserIsNotGroupAdminError(BaseAppException):
+    """Пользователь не является администратором группы"""
+
+    def __init__(self):
+        super().__init__(
+            message="Только администратор группы может выполнять это действие",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )

@@ -1,6 +1,6 @@
 import datetime
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, field_validator
 from fastapi import Form
 
 from src.schemas import UserInGroupResponse, MediaMessagesResponse
@@ -45,3 +45,18 @@ class GroupResponse(ShortGroupResponse):
     created_at: datetime.datetime
     members: list[UserInGroupResponse]
     media: MediaMessagesResponse
+
+
+class UpdateGroupRequest(BaseModel):
+    """Схема редактирования текстовых данных группы (JSON)"""
+
+    title: str | None = (Form(default=None),)
+    description: str | None = (Form(default=None),)
+    is_private: bool | None = Form(default=None)
+
+    # Валидация: если передали title, он не должен быть пустой строкой
+    @field_validator("title")
+    def title_not_empty(cls, v):
+        if v is not None and not v.strip():
+            raise ValueError("Название не может быть пустым")
+        return v
