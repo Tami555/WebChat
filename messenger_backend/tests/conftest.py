@@ -286,6 +286,66 @@ async def created_private_group_user1_user3(test_db, created_user_1, created_use
         return group
 
 
+@pytest.fixture
+async def created_group_with_avatar(test_db, created_user_1, created_user_2):
+    """Создает группу с аватаркой"""
+    from src.crud.groups import GroupCRUD
+    from tests.fixtures.data import GroupsDataFactory
+
+    group_data = GroupsDataFactory.group_data(title="Group With Avatar")
+    group_data["created_by"] = created_user_1.id
+    group_data["avatar_url"] = "avatars/groups/fake_existing_avatar.jpg"
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[created_user_2.id],
+            session=session,
+        )
+        return group
+
+
+@pytest.fixture
+async def group_with_roles(test_db, created_user_1, created_user_2, created_user_3):
+    """
+    Группа, где:
+    - пользователь 1 — создатель (главный админ)
+    - пользователь 2 — назначенный админ
+    - пользователь 3 — простой участник
+    """
+    from src.crud import GroupCRUD
+    from src.models import GroupMembers
+    from src.schemas.enums import GroupMemberRole
+    from tests.fixtures.data import GroupsDataFactory
+
+    group_data = GroupsDataFactory.group_data(title="Roles Group")
+    group_data["created_by"] = created_user_1.id
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[],
+            session=session,
+        )
+        # Добавляем участников с ролями
+        session.add(
+            GroupMembers(
+                group_id=group.id, user_id=created_user_2.id, role=GroupMemberRole.ADMIN
+            )
+        )
+        session.add(
+            GroupMembers(
+                group_id=group.id,
+                user_id=created_user_3.id,
+                role=GroupMemberRole.MEMBER,
+            )
+        )
+        await session.commit()
+        return group
+
+
 # ФИКСТУРЫ ДЛЯ СООБЩЕНИЙ
 @pytest.fixture
 async def created_message_in_dialog_1_2(
@@ -364,26 +424,6 @@ async def created_message_in_private_group(
             created_private_group_user1_user3, created_message, session
         )
         return created_message
-
-
-@pytest.fixture
-async def created_group_with_avatar(test_db, created_user_1, created_user_2):
-    """Создает группу с аватаркой"""
-    from src.crud.groups import GroupCRUD
-    from tests.fixtures.data import GroupsDataFactory
-
-    group_data = GroupsDataFactory.group_data(title="Group With Avatar")
-    group_data["created_by"] = created_user_1.id
-    group_data["avatar_url"] = "avatars/groups/fake_existing_avatar.jpg"
-
-    async for session in test_db.create_session():
-        group = await GroupCRUD.create_group(
-            creator_id=created_user_1.id,
-            group_data=group_data,
-            members_list=[created_user_2.id],
-            session=session,
-        )
-        return group
 
 
 @pytest.fixture

@@ -3,6 +3,7 @@ from typing import Optional, TypeVar
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Messages, Dialogs, Groups, GroupMembers
+from src.schemas.enums import GroupMemberRole
 from src.crud import MessageCRUD
 
 T = TypeVar("T")
@@ -221,3 +222,36 @@ class GroupDatabaseAssertions:
         group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
         assert group.avatar_url == expected_url
         return group
+
+    @staticmethod
+    async def assert_member_role(
+        session: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+        expected_role: GroupMemberRole,
+    ):
+        """Проверяет роль участника группы"""
+        member = await DatabaseAssertions.assert_exists(
+            session,
+            GroupMembers,
+            group_id=group_id,
+            user_id=user_id,
+        )
+        assert (
+            member.role == expected_role
+        ), f"Expected role {expected_role}, got {member.role}"
+        return member
+
+    @staticmethod
+    async def assert_member_not_in_group(
+        session: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ):
+        """Проверяет, что пользователь НЕ является участником группы"""
+        await DatabaseAssertions.assert_not_exists(
+            session,
+            GroupMembers,
+            group_id=group_id,
+            user_id=user_id,
+        )

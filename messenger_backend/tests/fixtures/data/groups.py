@@ -1,5 +1,5 @@
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, List
 
 
 class GroupsDataFactory:
@@ -56,3 +56,13 @@ class GroupsDataFactory:
         if is_private is not None:
             data["is_private"] = is_private
         return data
+
+    @staticmethod
+    def add_members_json(members: List[str]) -> Dict[str, Any]:
+        """JSON для добавления участников"""
+        return {"members": members}
+
+    @staticmethod
+    def update_role_json(role: str) -> Dict[str, Any]:
+        """JSON для изменения роли (role принимает 'admin' или 'member')"""
+        return {"role": role}

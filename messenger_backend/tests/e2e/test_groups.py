@@ -3,9 +3,10 @@ from uuid import uuid4
 from datetime import datetime
 from httpx import AsyncClient
 
-from src.schemas import ChatResponse, ShortGroupResponse
-from src.models.groups import Groups
-from src.models.group_members import GroupMembers
+from src.schemas import ChatResponse, ShortGroupResponse, GroupResponse
+from src.schemas.enums import GroupMemberRole
+from src.models import Groups, GroupMembers
+
 from tests.helpers.assertions import HttpAssertions, GroupDatabaseAssertions
 from tests.helpers.url_builder import url_builder
 from tests.fixtures.data import UserDataFactory, GroupsDataFactory
@@ -26,6 +27,18 @@ class TestGroups:
     @staticmethod
     def update_group_url(group_id):
         return url_builder.groups(str(group_id))
+
+    @staticmethod
+    def add_members_url(group_id):
+        return url_builder.groups(str(group_id), "members")
+
+    @staticmethod
+    def delete_member_url(group_id, user_id):
+        return url_builder.groups(str(group_id), "members", str(user_id))
+
+    @staticmethod
+    def update_member_role_url(group_id, user_id):
+        return url_builder.groups(str(group_id), "members", str(user_id), "role")
 
     class TestGetGroups:
         """Тесты получения списка групп"""
@@ -563,8 +576,6 @@ class TestGroups:
                 created_message_in_private_group,
             ):
                 """Тест: получение инфы о группе с медиа-сообщениями"""
-                from src.schemas import GroupResponse
-
                 group_id = created_private_group_user1_user3.id
                 response = await auth_client_user_1.get(
                     TestGroups.get_group_detail_url(group_id)
@@ -590,8 +601,6 @@ class TestGroups:
                 created_group_user1_user3,
             ):
                 """Тест: участник получает инфу о публичной группе"""
-                from src.schemas import GroupResponse
-
                 group_id = created_group_user1_user3.id
                 response = await auth_client_user_1.get(
                     TestGroups.get_group_detail_url(group_id)
@@ -612,8 +621,6 @@ class TestGroups:
                 created_group_user1_user3,
             ):
                 """Тест: НЕ участник может получить инфу о публичной группе"""
-                from src.schemas import GroupResponse
-
                 group_id = created_group_user1_user3.id
                 response = await auth_client_user_2.get(
                     TestGroups.get_group_detail_url(group_id)
@@ -635,8 +642,6 @@ class TestGroups:
                 auth_client_user_1,
             ):
                 """Тест: получение инфы о несуществующей группе"""
-                from uuid import uuid4
-
                 non_existent_id = uuid4()
                 response = await auth_client_user_1.get(
                     TestGroups.get_group_detail_url(non_existent_id)
@@ -790,13 +795,10 @@ class TestGroups:
             auth_client_user_1,
         ):
             """Тест: обновление несуществующей группы"""
-            from uuid import uuid4
-
-            non_existent_id = uuid4()
             data = GroupsDataFactory.update_group_json(title="Ghost")
 
             response = await auth_client_user_1.patch(
-                TestGroups.update_group_url(non_existent_id),
+                TestGroups.update_group_url(uuid4()),
                 json=data,
             )
 
@@ -823,4 +825,303 @@ class TestGroups:
             HttpAssertions.assert_unauthorized_error(
                 response=response,
                 expected_message="Вы не авторизованы! Войдите пожалуйста в аккаунт",
+            )
+
+    class TestGroupMembers:
+        """Тесты управления участниками группы"""
+
+        class TestAddMembers:
+            """Тесты на добавление участников в группу"""
+
+            @pytest.mark.asyncio
+            async def test_add_members_success(
+                self,
+                auth_client_user_1,
+                created_group_user1_user3,
+                created_user_2,
+                test_db,
+            ):
+                """Тест: успешное добавление участников админом"""
+
+                data = GroupsDataFactory.add_members_json([str(created_user_2.id)])
+                response = await auth_client_user_1.post(
+                    TestGroups.add_members_url(created_group_user1_user3.id),
+                    json=data,
+                )
+
+                HttpAssertions.assert_success_response(response, dict)
+
+                async for session in test_db.create_session():
+                    await GroupDatabaseAssertions.assert_member_in_group(
+                        session, created_group_user1_user3.id, created_user_2.id
+                    )
+
+            @pytest.mark.asyncio
+            async def test_add_members_not_admin(
+                self,
+                auth_client_user_3,  # Простой участник
+                created_group_user1_user3,
+                created_user_2,
+            ):
+                """Тест: добавление участников не админом"""
+                data = GroupsDataFactory.add_members_json([str(created_user_2.id)])
+                response = await auth_client_user_3.post(
+                    TestGroups.add_members_url(created_group_user1_user3.id),
+                    json=data,
+                )
+                HttpAssertions.assert_error_response(
+                    response,
+                    "Только администратор группы может выполнять это действие",
+                    403,
+                )
+
+            @pytest.mark.asyncio
+            async def test_add_members_already_exists(
+                self,
+                auth_client_user_1,
+                group_with_roles,
+                created_user_2,
+            ):
+                """Тест: добавление того, кто уже в группе"""
+                data = GroupsDataFactory.add_members_json([str(created_user_2.id)])
+                response = await auth_client_user_1.post(
+                    TestGroups.add_members_url(group_with_roles.id),
+                    json=data,
+                )
+                HttpAssertions.assert_error_response(
+                    response,
+                    f"Участник с таким {created_user_2.id} уже есть в группе",
+                    409,
+                )
+
+            @pytest.mark.asyncio
+            async def test_add_members_user_not_found(
+                self,
+                auth_client_user_1,
+                group_with_roles,
+            ):
+                """Тест: добавление несуществующего пользователя"""
+                data = GroupsDataFactory.add_members_json([str(uuid4())])
+                response = await auth_client_user_1.post(
+                    TestGroups.add_members_url(group_with_roles.id),
+                    json=data,
+                )
+                HttpAssertions.assert_not_found_error(
+                    response, "Пользователь не найден"
+                )
+
+            @pytest.mark.asyncio
+            async def test_add_members_group_not_found(
+                self,
+                auth_client_user_1,
+            ):
+                """Тест: добавление участников в несуществующую группу"""
+                data = GroupsDataFactory.add_members_json([str(uuid4())])
+
+                response = await auth_client_user_1.post(
+                    TestGroups.add_members_url(uuid4()),
+                    json=data,
+                )
+                HttpAssertions.assert_not_found_error(response, "Группа не найдена")
+
+        class TestRemoveMember:
+            """Тесты на удаление участников из группы"""
+
+            @pytest.mark.asyncio
+            async def test_remove_member_success(
+                self,
+                auth_client_user_1,  # Главный админ
+                group_with_roles,
+                created_user_3,  # Простой участник
+                test_db,
+            ):
+                """Тест: успешное удаление участника админом"""
+                response = await auth_client_user_1.delete(
+                    TestGroups.delete_member_url(group_with_roles.id, created_user_3.id)
+                )
+                HttpAssertions.assert_success_response(response, dict)
+
+                async for session in test_db.create_session():
+                    await GroupDatabaseAssertions.assert_member_not_in_group(
+                        session, group_with_roles.id, created_user_3.id
+                    )
+
+            @pytest.mark.asyncio
+            async def test_remove_other_admin_success(
+                self,
+                auth_client_user_1,  # Главный админ
+                group_with_roles,
+                created_user_2,  # Другой админ
+                test_db,
+            ):
+                """Тест: админ может удалить другого админа (не создателя)"""
+                response = await auth_client_user_1.delete(
+                    TestGroups.delete_member_url(group_with_roles.id, created_user_2.id)
+                )
+                HttpAssertions.assert_success_response(response, dict)
+
+                async for session in test_db.create_session():
+                    await GroupDatabaseAssertions.assert_member_not_in_group(
+                        session, group_with_roles.id, created_user_2.id
+                    )
+
+            @pytest.mark.asyncio
+            async def test_remove_creator_fail(
+                self,
+                auth_client_user_2,  # Назначенный админ
+                group_with_roles,
+                created_user_1,  # Создатель
+            ):
+                """Тест: нельзя удалить создателя группы"""
+                response = await auth_client_user_2.delete(
+                    TestGroups.delete_member_url(group_with_roles.id, created_user_1.id)
+                )
+                HttpAssertions.assert_error_response(
+                    response, "Нельзя изменить роль или удалить создателя группы", 403
+                )
+
+            @pytest.mark.asyncio
+            async def test_remove_member_not_admin(
+                self,
+                auth_client_user_3,  # Простой участник
+                group_with_roles,
+                created_user_2,
+            ):
+                """Тест: удаление участника не админом"""
+                response = await auth_client_user_3.delete(
+                    TestGroups.delete_member_url(group_with_roles.id, created_user_2.id)
+                )
+                HttpAssertions.assert_error_response(
+                    response,
+                    "Только администратор группы может выполнять это действие",
+                    403,
+                )
+
+            @pytest.mark.asyncio
+            async def test_remove_member_not_in_group(
+                self,
+                auth_client_user_1,
+                group_with_roles,
+            ):
+                """Тест: удаление пользователя, которого нет в группе"""
+                response = await auth_client_user_1.delete(
+                    TestGroups.delete_member_url(group_with_roles.id, uuid4())
+                )
+                HttpAssertions.assert_not_found_error(
+                    response, "Участник не найден в этой группе"
+                )
+
+    class TestUpdateMemberRole:
+        """Тесты на редактирование ролей участников группы"""
+
+        @pytest.mark.asyncio
+        async def test_update_role_to_admin_success(
+            self,
+            auth_client_user_1,
+            group_with_roles,
+            created_user_3,  # Простой участник
+            test_db,
+        ):
+            """Тест: повышение участника до админа"""
+            from tests.helpers.assertions import GroupDatabaseAssertions
+
+            data = GroupsDataFactory.update_role_json("admin")
+            response = await auth_client_user_1.put(
+                TestGroups.update_member_role_url(
+                    group_with_roles.id, created_user_3.id
+                ),
+                json=data,
+            )
+            HttpAssertions.assert_success_response(response, dict)
+
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_member_role(
+                    session,
+                    group_with_roles.id,
+                    created_user_3.id,
+                    GroupMemberRole.ADMIN,
+                )
+
+        @pytest.mark.asyncio
+        async def test_update_role_to_member_success(
+            self,
+            auth_client_user_1,  # Главный админ
+            group_with_roles,
+            created_user_2,  # Другой админ
+            test_db,
+        ):
+            """Тест: понижение другого админа до участника"""
+            data = GroupsDataFactory.update_role_json("member")
+            response = await auth_client_user_1.put(
+                TestGroups.update_member_role_url(
+                    group_with_roles.id, created_user_2.id
+                ),
+                json=data,
+            )
+            HttpAssertions.assert_success_response(response, dict)
+
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_member_role(
+                    session,
+                    group_with_roles.id,
+                    created_user_2.id,
+                    GroupMemberRole.MEMBER,
+                )
+
+        @pytest.mark.asyncio
+        async def test_demote_creator_fail(
+            self,
+            auth_client_user_2,  # Назначенный админ
+            group_with_roles,
+            created_user_1,  # Создатель
+        ):
+            """Тест: нельзя понизить создателя группы"""
+            data = GroupsDataFactory.update_role_json("member")
+            response = await auth_client_user_2.put(
+                TestGroups.update_member_role_url(
+                    group_with_roles.id, created_user_1.id
+                ),
+                json=data,
+            )
+            HttpAssertions.assert_error_response(
+                response, "Нельзя изменить роль или удалить создателя группы", 403
+            )
+
+        @pytest.mark.asyncio
+        async def test_update_role_not_admin(
+            self,
+            auth_client_user_3,  # Простой участник
+            group_with_roles,
+            created_user_2,
+        ):
+            """Тест: изменение роли не админом"""
+            data = GroupsDataFactory.update_role_json("admin")
+            response = await auth_client_user_3.put(
+                TestGroups.update_member_role_url(
+                    group_with_roles.id, created_user_2.id
+                ),
+                json=data,
+            )
+            HttpAssertions.assert_error_response(
+                response,
+                "Только администратор группы может выполнять это действие",
+                403,
+            )
+
+        @pytest.mark.asyncio
+        async def test_update_role_member_not_found(
+            self,
+            auth_client_user_1,
+            group_with_roles,
+        ):
+            """Тест: изменение роли пользователя, которого нет в группе -> 404"""
+            non_existent_id = uuid4()
+            data = GroupsDataFactory.update_role_json("admin")
+
+            response = await auth_client_user_1.put(
+                TestGroups.update_member_role_url(group_with_roles.id, non_existent_id),
+                json=data,
+            )
+            HttpAssertions.assert_not_found_error(
+                response, "Участник не найден в этой группе"
             )
