@@ -4,6 +4,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from fastapi import Form
 
 from src.schemas import UserInGroupResponse, MediaMessagesResponse
+from src.schemas.enums import GroupMemberRole
 
 
 class CreateGroupWithMembersRequest(BaseModel):
@@ -60,3 +61,15 @@ class UpdateGroupRequest(BaseModel):
         if v is not None and not v.strip():
             raise ValueError("Название не может быть пустым")
         return v
+
+
+class AddGroupMembersRequest(BaseModel):
+    """Схема добавления участников в группу"""
+
+    members: list[UUID]
+
+
+class UpdateMemberRoleRequest(BaseModel):
+    """Схема изменения роли участника"""
+
+    role: GroupMemberRole

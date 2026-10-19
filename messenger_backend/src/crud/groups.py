@@ -1,4 +1,4 @@
-from sqlalchemy import select, update
+from sqlalchemy import select, delete
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -146,3 +146,50 @@ class GroupCRUD:
         )
         member = await session.execute(stmt)
         return member.scalar_one_or_none() is not None
+
+    @staticmethod
+    async def get_group_member(
+        group_id: UUID, user_id: UUID, session: AsyncSession
+    ) -> GroupMembers | None:
+        """Получение записи участника группы"""
+        stmt = select(GroupMembers).where(
+            GroupMembers.group_id == group_id,
+            GroupMembers.user_id == user_id,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def add_members(
+        group_id: UUID, user_ids: list[UUID], session: AsyncSession
+    ) -> None:
+        """Добавление участников в группу"""
+        group = await GroupCRUD.get_group_by_id(group_id, session)
+        for uid in user_ids:
+            group.group_members.append(GroupMembers(user_id=uid))
+        session.add(group)
+        await session.commit()
+
+    @staticmethod
+    async def remove_member(
+        group_id: UUID, user_id: UUID, session: AsyncSession
+    ) -> None:
+        """Удаление участника из группы"""
+        stmt = delete(GroupMembers).where(
+            GroupMembers.group_id == group_id,
+            GroupMembers.user_id == user_id,
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+    @staticmethod
+    async def update_member_role(
+        group_id: UUID, user_id: UUID, new_role: GroupMemberRole, session: AsyncSession
+    ) -> GroupMembers:
+        """Изменение роли участника"""
+        member = await GroupCRUD.get_group_member(group_id, user_id, session)
+        member.role = new_role
+        session.add(member)
+        await session.commit()
+        await session.refresh(member)
+        return member

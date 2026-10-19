@@ -26,3 +26,9 @@ class UserService:
         if not usernames:
             return []
         return await UserCRUD.get_user_ids_by_usernames(usernames, session)
+
+    @staticmethod
+    async def check_users_exist(members: list[UUID], session: AsyncSession):
+        """Проверка, что все пользователи существуют"""
+        if not await UserCRUD.check_users_exist(session, members):
+            raise UserNotFoundError()

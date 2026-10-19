@@ -10,6 +10,8 @@ from src.schemas import (
     GroupResponse,
     UserInGroupResponse,
     UpdateGroupRequest,
+    AddGroupMembersRequest,
+    UpdateMemberRoleRequest,
 )
 from src.schemas.enums import MessageType
 from src.exceptions import (
@@ -19,8 +21,12 @@ from src.exceptions import (
     GroupNotFoundError,
     UserIsNotGroupMemberError,
     UserIsNotGroupAdminError,
+    MemberAlreadyExistsError,
+    CannotModifyGroupCreatorError,
+    GroupMemberNotFoundError,
 )
 from src.services.file_service import FileService
+from src.services.user_service import UserService
 
 
 class GroupService:
@@ -47,6 +53,15 @@ class GroupService:
         ):
             raise UserIsNotGroupMemberError()
         return True
+
+    @staticmethod
+    async def check_user_is_admin(
+        user_id: UUID, group: Groups, session: AsyncSession
+    ) -> None:
+        """Проверка, что пользователь является админом группы"""
+        is_admin = await GroupCRUD.check_admin_group(group.id, user_id, session)
+        if not is_admin:
+            raise UserIsNotGroupAdminError()
 
     @staticmethod
     async def get_groups_by_user(
@@ -182,11 +197,9 @@ class GroupService:
         update_data: UpdateGroupRequest,
         session: AsyncSession,
     ) -> Groups:
-        """Обновление текстовой информации о группе"""
+        """Обновление текстовой информации о группе (только админ)"""
         group = await GroupService.get_group_by_id(group_id, session)
-        is_admin = await GroupCRUD.check_admin_group(group_id, user.id, session)
-        if not is_admin:
-            raise UserIsNotGroupAdminError()
+        await GroupService.check_user_is_admin(user.id, group, session)
 
         update_dict = update_data.model_dump(exclude_unset=True)
         if not update_dict:
@@ -201,12 +214,9 @@ class GroupService:
         avatar: UploadFile,
         session: AsyncSession,
     ) -> Groups:
-        """Обновление или удаление аватарки группы"""
+        """Обновление аватарки группы (только админ)"""
         group = await GroupService.get_group_by_id(group_id, session)
-
-        is_admin = await GroupCRUD.check_admin_group(group_id, user.id, session)
-        if not is_admin:
-            raise UserIsNotGroupAdminError()
+        await GroupService.check_user_is_admin(user.id, group, session)
 
         # Удаляем старую, сохраняем новую
         if group.avatar_url:
@@ -223,19 +233,88 @@ class GroupService:
         group_id: UUID,
         session: AsyncSession,
     ) -> Groups:
-        """Удаление аватарки группы"""
+        """Удаление аватарки группы (только админ)"""
         group = await GroupService.get_group_by_id(group_id, session)
-
-        is_admin = await GroupCRUD.check_admin_group(group_id, user.id, session)
-        if not is_admin:
-            raise UserIsNotGroupAdminError()
+        await GroupService.check_user_is_admin(user.id, group, session)
 
         if group.avatar_url:
             await FileService.delete_group_avatar(group.avatar_url)
             group = await GroupCRUD.update_group_avatar_url(group, None, session)
         return group
 
+    @staticmethod
+    async def add_members(
+        user: Users,
+        group_id: UUID,
+        data: AddGroupMembersRequest,
+        session: AsyncSession,
+    ) -> None:
+        """Добавление участников (только админ)"""
+        group = await GroupCRUD.get_group_with_members(group_id, session)
+        if group is None:
+            raise GroupNotFoundError()
+
+        await GroupService.check_user_is_admin(user.id, group, session)
+
+        # Проверяем, что пользователи существуют
+        await UserService.check_users_exist(data.members, session)
+
+        # Фильтруем тех, кто уже в группе
+        existing_members = {m.user_id for m in group.group_members}
+        for uid in data.members:
+            if uid in existing_members:
+                raise MemberAlreadyExistsError(uid)
+
+        await GroupCRUD.add_members(group_id, data.members, session)
+
+    @staticmethod
+    async def remove_member(
+        user: Users,
+        group_id: UUID,
+        target_user_id: UUID,
+        session: AsyncSession,
+    ) -> None:
+        """Удаление участника (только админ)"""
+        group = await GroupService.get_group_by_id(group_id, session)
+        await GroupService.check_user_is_admin(user.id, group, session)
+
+        # Проверяем, есть ли такой участник
+        target_member = await GroupCRUD.get_group_member(
+            group_id, target_user_id, session
+        )
+        if not target_member:
+            raise GroupMemberNotFoundError()
+
+        # Защита создателя
+        if target_user_id == group.created_by:
+            raise CannotModifyGroupCreatorError()
+
+        await GroupCRUD.remove_member(group_id, target_user_id, session)
+
+    @staticmethod
+    async def update_member_role(
+        user: Users,
+        group_id: UUID,
+        target_user_id: UUID,
+        data: UpdateMemberRoleRequest,
+        session: AsyncSession,
+    ) -> None:
+        """Изменение роли участника (только админ)"""
+        group = await GroupService.get_group_by_id(group_id, session)
+        await GroupService.check_user_is_admin(user.id, group, session)
+
+        target_member = await GroupCRUD.get_group_member(
+            group_id, target_user_id, session
+        )
+        if not target_member:
+            raise GroupMemberNotFoundError()
+
+        # Защита создателя
+        if target_user_id == group.created_by:
+            raise CannotModifyGroupCreatorError()
+
+        await GroupCRUD.update_member_role(group_id, target_user_id, data.role, session)
+
     # TODO:
-    # Добавление/удаление пользователей из группы
-    # Изменение роли пользователя
     # Удаление группы
+    # Зайти/Выйти из группы

@@ -11,6 +11,8 @@ from src.schemas import (
     CreateGroupWithMembersRequest,
     ChatResponse,
     UpdateGroupRequest,
+    AddGroupMembersRequest,
+    UpdateMemberRoleRequest,
 )
 from src.services import GroupService
 
@@ -69,3 +71,40 @@ async def update_group_info(
         update_data=data,
         session=session,
     )
+
+
+@router.post("/{group_id}/members")
+async def add_group_members(
+    group_id: UUID,
+    data: AddGroupMembersRequest,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Добавить участников в группу"""
+    await GroupService.add_members(user, group_id, data, session)
+    return {"status": "ok"}
+
+
+@router.delete("/{group_id}/members/{target_user_id}")
+async def remove_group_member(
+    group_id: UUID,
+    target_user_id: UUID,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Удалить участника из группы"""
+    await GroupService.remove_member(user, group_id, target_user_id, session)
+    return {"status": "ok"}
+
+
+@router.put("/{group_id}/members/{target_user_id}/role")
+async def update_group_member_role(
+    group_id: UUID,
+    target_user_id: UUID,
+    data: UpdateMemberRoleRequest,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Изменить роль участника группы"""
+    await GroupService.update_member_role(user, group_id, target_user_id, data, session)
+    return {"status": "ok"}

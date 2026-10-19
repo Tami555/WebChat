@@ -61,3 +61,23 @@ class UserIsNotGroupAdminError(BaseAppException):
             message="Только администратор группы может выполнять это действие",
             status_code=status.HTTP_403_FORBIDDEN,
         )
+
+
+class CannotModifyGroupCreatorError(BaseAppException):
+    """Попытка изменить роль или удалить создателя группы"""
+
+    def __init__(self):
+        super().__init__(
+            message="Нельзя изменить роль или удалить создателя группы",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class GroupMemberNotFoundError(BaseAppException):
+    """Участник группы не найден"""
+
+    def __init__(self):
+        super().__init__(
+            message="Участник не найден в этой группе",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )

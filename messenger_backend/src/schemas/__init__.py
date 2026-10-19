@@ -25,6 +25,8 @@ __all__ = (
     "ShortGroupResponse",
     "GroupResponse",
     "UpdateGroupRequest",
+    "AddGroupMembersRequest",
+    "UpdateMemberRoleRequest",
     "CreateGroupWithMembersRequest",
     "CreateDialogRequest",
     "DialogDetailResponse",
@@ -78,6 +80,8 @@ from .groups import (
     CreateGroupWithMembersRequest,
     GroupResponse,
     UpdateGroupRequest,
+    AddGroupMembersRequest,
+    UpdateMemberRoleRequest,
 )
 from .dialogs import CreateDialogRequest, DialogDetailResponse
 from .sticker import (
