@@ -108,3 +108,25 @@ async def update_group_member_role(
     """Изменить роль участника группы"""
     await GroupService.update_member_role(user, group_id, target_user_id, data, session)
     return {"status": "ok"}
+
+
+@router.post("/{group_id}/join")
+async def join_group(
+    group_id: UUID,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Присоединиться к публичной группе"""
+    await GroupService.join_public_group(user, group_id, session)
+    return {"status": "ok"}
+
+
+@router.delete("/{group_id}/leave")
+async def leave_group(
+    group_id: UUID,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Выйти из группы"""
+    await GroupService.leave_group(user, group_id, session)
+    return {"status": "ok"}

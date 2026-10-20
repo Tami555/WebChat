@@ -81,3 +81,13 @@ class GroupMemberNotFoundError(BaseAppException):
             message="Участник не найден в этой группе",
             status_code=status.HTTP_404_NOT_FOUND,
         )
+
+
+class GroupIsPrivateError(BaseAppException):
+    """Группа является приватной"""
+
+    def __init__(self):
+        super().__init__(
+            message="Группа является приватной. Вы не имейте к ней доступ",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )

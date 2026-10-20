@@ -24,6 +24,7 @@ from src.exceptions import (
     MemberAlreadyExistsError,
     CannotModifyGroupCreatorError,
     GroupMemberNotFoundError,
+    GroupIsPrivateError,
 )
 from src.services.file_service import FileService
 from src.services.user_service import UserService
@@ -36,6 +37,14 @@ class GroupService:
     async def get_group_by_id(group_id: UUID, session: AsyncSession) -> Groups:
         """Получение группы по id"""
         group = await GroupCRUD.get_group_by_id(group_id, session)
+        if group is None:
+            raise GroupNotFoundError()
+        return group
+
+    @staticmethod
+    async def get_group_with_members(group_id: UUID, session: AsyncSession):
+        """Получение группы с участниками"""
+        group = await GroupCRUD.get_group_with_members(group_id, session)
         if group is None:
             raise GroupNotFoundError()
         return group
@@ -89,9 +98,7 @@ class GroupService:
         group_id: UUID, session: AsyncSession
     ) -> set[str]:
         """Получение username-участников группы"""
-        group = await GroupCRUD.get_group_with_members(group_id, session)
-        if group is None:
-            raise GroupNotFoundError()
+        group = await GroupService.get_group_with_members(group_id, session)
         return {member.member.username for member in group.group_members}
 
     @staticmethod
@@ -150,9 +157,7 @@ class GroupService:
         user_id: UUID, group_id: UUID, session: AsyncSession
     ) -> GroupResponse:
         """Получение полной информации о группе"""
-        group = await GroupCRUD.get_group_with_members(group_id, session)
-        if group is None:
-            raise GroupNotFoundError()
+        group = await GroupService.get_group_with_members(group_id, session)
         if group.is_private:
             await GroupService.check_user_in_group_members(user_id, group_id, session)
         media = await GroupCRUD.get_group_media(group_id, session)
@@ -250,12 +255,8 @@ class GroupService:
         session: AsyncSession,
     ) -> None:
         """Добавление участников (только админ)"""
-        group = await GroupCRUD.get_group_with_members(group_id, session)
-        if group is None:
-            raise GroupNotFoundError()
-
+        group = await GroupService.get_group_with_members(group_id, session)
         await GroupService.check_user_is_admin(user.id, group, session)
-
         # Проверяем, что пользователи существуют
         await UserService.check_users_exist(data.members, session)
 
@@ -315,6 +316,42 @@ class GroupService:
 
         await GroupCRUD.update_member_role(group_id, target_user_id, data.role, session)
 
+    @staticmethod
+    async def join_public_group(
+        user: Users,
+        group_id: UUID,
+        session: AsyncSession,
+    ) -> None:
+        """Самостоятельное присоединение к публичной группе"""
+        group = await GroupService.get_group_with_members(group_id, session)
+        if group.is_private:
+            raise GroupIsPrivateError()
+
+        # Проверка, что ещё не в группе
+        existing = await GroupCRUD.get_group_member(group_id, user.id, session)
+        if existing:
+            raise MemberAlreadyExistsError(user.id)
+
+        await GroupCRUD.add_members(group_id, [user.id], session)
+
+    @staticmethod
+    async def leave_group(
+        user: Users,
+        group_id: UUID,
+        session: AsyncSession,
+    ) -> None:
+        """Самостоятельный выход из группы"""
+        group = await GroupService.get_group_by_id(group_id, session)
+
+        member = await GroupCRUD.get_group_member(group_id, user.id, session)
+        if not member:
+            raise UserIsNotGroupMemberError()
+
+        # Защита создателя
+        if user.id == group.created_by:
+            raise CannotModifyGroupCreatorError()
+
+        await GroupCRUD.remove_member(group_id, user.id, session)
+
     # TODO:
     # Удаление группы
-    # Зайти/Выйти из группы
