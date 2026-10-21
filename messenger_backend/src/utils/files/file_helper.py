@@ -58,7 +58,7 @@ class FilePathHelper:
         filename = Path(file_path).name
         artifacts = str(filename).split("_")
         return "".join(artifacts[1:])
-    
+
     @staticmethod
     def ensure_directory_exists(file_path: Path) -> None:
         """Создает директорию для файла, если её нет"""

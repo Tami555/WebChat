@@ -15,6 +15,7 @@ class NotCorrectMessageTypeForFileTypeError(BaseAppException):
 
 class InvalidAvatarFileError(BaseAppException):
     """Невалидный файл аватара"""
+
     def __init__(self, content_type: str):
         super().__init__(
             message=f"Аватар должен быть изображением, получен: {content_type}",
