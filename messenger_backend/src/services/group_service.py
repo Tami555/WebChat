@@ -330,7 +330,7 @@ class GroupService:
         # Проверка, что ещё не в группе
         existing = await GroupCRUD.get_group_member(group_id, user.id, session)
         if existing:
-            raise MemberAlreadyExistsError(user.id)
+            raise MemberAlreadyExistsError()
 
         await GroupCRUD.add_members(group_id, [user.id], session)
 

@@ -40,6 +40,14 @@ class TestGroups:
     def update_member_role_url(group_id, user_id):
         return url_builder.groups(str(group_id), "members", str(user_id), "role")
 
+    @staticmethod
+    def get_join_url(group_id):
+        return url_builder.groups(str(group_id), "join")
+
+    @staticmethod
+    def get_leave_url(group_id):
+        return url_builder.groups(str(group_id), "leave")
+
     class TestGetGroups:
         """Тесты получения списка групп"""
 
@@ -1125,3 +1133,123 @@ class TestGroups:
             HttpAssertions.assert_not_found_error(
                 response, "Участник не найден в этой группе"
             )
+
+    class TestGroupJoin:
+        """Тесты присоединения к публичной группе"""
+
+        @pytest.mark.asyncio
+        async def test_join_public_group_success(
+            self,
+            created_user_2,
+            auth_client_user_2,  # Свободный пользователь
+            created_group_user1_user3,  # Публичная группа
+            test_db,
+        ):
+            """Тест: успешное присоединение к публичной группе"""
+            response = await auth_client_user_2.post(
+                TestGroups.get_join_url(created_group_user1_user3.id)
+            )
+            HttpAssertions.assert_success_response(response, dict)
+
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_member_in_group(
+                    session, created_group_user1_user3.id, created_user_2.id
+                )
+
+        @pytest.mark.asyncio
+        async def test_join_private_group_fail(
+            self,
+            auth_client_user_2,  # Свободный пользователь
+            created_private_group_user1_user3,  # Приватная группа
+        ):
+            """Тест: нельзя присоединиться к приватной группе -> 403"""
+            response = await auth_client_user_2.post(
+                TestGroups.get_join_url(created_private_group_user1_user3.id)
+            )
+            HttpAssertions.assert_error_response(
+                response, "Группа является приватной. Вы не имейте к ней доступ", 403
+            )
+
+        @pytest.mark.asyncio
+        async def test_join_already_member_fail(
+            self,
+            auth_client_user_3,  # Уже в группе
+            created_group_user1_user3,
+        ):
+            """Тест: нельзя присоединиться, если уже в группе -> 409"""
+            response = await auth_client_user_3.post(
+                TestGroups.get_join_url(created_group_user1_user3.id)
+            )
+            HttpAssertions.assert_error_response(
+                response, "Вы уже являетесь участником этой группы", 409
+            )
+
+        @pytest.mark.asyncio
+        async def test_join_group_not_found(
+            self,
+            auth_client_user_2,
+        ):
+            """Тест: присоединение к несуществующей группе -> 404"""
+            response = await auth_client_user_2.post(TestGroups.get_join_url(uuid4()))
+            HttpAssertions.assert_not_found_error(response, "Группа не найдена")
+
+    class TestGroupLeave:
+        """Тесты выхода из группы"""
+
+        @pytest.mark.asyncio
+        async def test_leave_group_success(
+            self,
+            created_user_3,
+            auth_client_user_3,  # Участник
+            created_group_user1_user3,
+            test_db,
+        ):
+            """Тест: успешный выход из группы"""
+            response = await auth_client_user_3.delete(
+                TestGroups.get_leave_url(created_group_user1_user3.id)
+            )
+            HttpAssertions.assert_success_response(response, dict)
+
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_member_not_in_group(
+                    session, created_group_user1_user3.id, created_user_3.id
+                )
+
+        @pytest.mark.asyncio
+        async def test_leave_group_not_member_fail(
+            self,
+            auth_client_user_2,  # Не в группе
+            created_group_user1_user3,
+        ):
+            """Тест: нельзя выйти из группы, если не в ней"""
+            response = await auth_client_user_2.delete(
+                TestGroups.get_leave_url(created_group_user1_user3.id)
+            )
+            HttpAssertions.assert_error_response(
+                response, "Вы не являетесь участником группы", 403
+            )
+
+        @pytest.mark.asyncio
+        async def test_creator_leave_group_fail(
+            self,
+            auth_client_user_1,  # Создатель
+            created_group_user1_user3,
+        ):
+            """Тест: создатель не может выйти из группы"""
+            response = await auth_client_user_1.delete(
+                TestGroups.get_leave_url(created_group_user1_user3.id)
+            )
+            HttpAssertions.assert_error_response(
+                response, "Нельзя изменить роль или удалить создателя группы", 403
+            )
+
+        @pytest.mark.asyncio
+        async def test_leave_group_not_found(
+            self,
+            auth_client_user_3,
+        ):
+            """Тест: выход из несуществующей группы"""
+            response = await auth_client_user_3.delete(
+                TestGroups.get_leave_url(uuid4())
+            )
+            HttpAssertions.assert_not_found_error(response, "Группа не найдена")

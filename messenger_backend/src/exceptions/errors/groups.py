@@ -7,9 +7,14 @@ from ..base import BaseAppException
 class MemberAlreadyExistsError(BaseAppException):
     """Участник уже есть в группе"""
 
-    def __init__(self, user_id: UUID):
+    def __init__(self, user_id: UUID | None = None):
+        msg = (
+            "Вы уже являетесь участником этой группы"
+            if user_id is None
+            else f"Участник с таким {user_id} уже есть в группе"
+        )
         super().__init__(
-            message=f"Участник с таким {user_id} уже есть в группе",
+            message=msg,
             status_code=status.HTTP_409_CONFLICT,
         )
 
