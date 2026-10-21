@@ -170,6 +170,14 @@ class GroupDatabaseAssertions:
         return group
 
     @staticmethod
+    async def assert_group_not_exists(
+        session: AsyncSession,
+        group_id: UUID,
+    ):
+        """Проверяет, что группы нет в БД"""
+        await DatabaseAssertions.assert_not_exists(session, Groups, id=group_id)
+
+    @staticmethod
     async def assert_member_in_group(
         session: AsyncSession,
         group_id: UUID,

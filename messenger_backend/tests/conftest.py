@@ -346,6 +346,39 @@ async def group_with_roles(test_db, created_user_1, created_user_2, created_user
         return group
 
 
+@pytest.fixture
+async def group_with_avatar_and_messages(test_db, created_user_1, created_user_3):
+    """Публичная группа с авой и сообщениями (для теста удаления)"""
+    from src.crud.groups import GroupCRUD
+    from tests.fixtures.data import GroupsDataFactory
+    from src.models.messages import Messages
+    from src.crud.messages import MessageCRUD
+
+    group_data = GroupsDataFactory.group_data(title="To Delete")
+    group_data["created_by"] = created_user_1.id
+    group_data["avatar_url"] = "avatars/groups/fake_avatar.jpg"
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[created_user_3.id],
+            session=session,
+        )
+        # Создаём сообщения с файлами
+        for i in range(3):
+            msg = Messages(
+                sender_id=created_user_1.id,
+                group_id=group.id,
+                content=f"Test message {i}",
+                file_url=(
+                    f"user_files/chats/{group.id}/file/test_{i}.txt" if i == 0 else None
+                ),
+            )
+            await MessageCRUD.create_message(msg, session)
+        return group
+
+
 # ФИКСТУРЫ ДЛЯ СООБЩЕНИЙ
 @pytest.fixture
 async def created_message_in_dialog_1_2(

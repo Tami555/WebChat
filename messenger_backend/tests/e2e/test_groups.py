@@ -5,9 +5,13 @@ from httpx import AsyncClient
 
 from src.schemas import ChatResponse, ShortGroupResponse, GroupResponse
 from src.schemas.enums import GroupMemberRole
-from src.models import Groups, GroupMembers
+from src.models import Groups, GroupMembers, Messages
 
-from tests.helpers.assertions import HttpAssertions, GroupDatabaseAssertions
+from tests.helpers.assertions import (
+    HttpAssertions,
+    DatabaseAssertions,
+    GroupDatabaseAssertions,
+)
 from tests.helpers.url_builder import url_builder
 from tests.fixtures.data import UserDataFactory, GroupsDataFactory
 from tests.helpers.factories import FileFactory
@@ -26,6 +30,10 @@ class TestGroups:
 
     @staticmethod
     def update_group_url(group_id):
+        return url_builder.groups(str(group_id))
+
+    @staticmethod
+    def delete_group_url(group_id):
         return url_builder.groups(str(group_id))
 
     @staticmethod
@@ -1251,5 +1259,95 @@ class TestGroups:
             """Тест: выход из несуществующей группы"""
             response = await auth_client_user_3.delete(
                 TestGroups.get_leave_url(uuid4())
+            )
+            HttpAssertions.assert_not_found_error(response, "Группа не найдена")
+
+    class TestDeleteGroup:
+        """Тесты удаления группы"""
+
+        @pytest.mark.asyncio
+        async def test_delete_group_success(
+            self,
+            auth_client_user_1,  # Создатель
+            created_group_user1_user3,
+            test_db,
+        ):
+            """Тест: создатель удаляет группу (с участниками)"""
+            group_id = created_group_user1_user3.id
+
+            response = await auth_client_user_1.delete(
+                TestGroups.delete_group_url(group_id)
+            )
+            data = HttpAssertions.assert_success_response(response, dict)
+            assert data["deleted_messages"] == 0
+
+            # Проверяем, что группы нет
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_group_not_exists(session, group_id)
+                # Проверяем, что участники тоже удалены
+                await DatabaseAssertions.assert_not_exists(
+                    session, GroupMembers, group_id=group_id
+                )
+
+        @pytest.mark.asyncio
+        async def test_delete_group_with_messages_and_avatar_success(
+            self,
+            auth_client_user_1,
+            group_with_avatar_and_messages,
+            test_db,
+        ):
+            """Тест: удаление группы с сообщениями и аватаркой"""
+            group_id = group_with_avatar_and_messages.id
+
+            response = await auth_client_user_1.delete(
+                TestGroups.delete_group_url(group_id)
+            )
+            data = HttpAssertions.assert_success_response(response, dict)
+
+            assert data["deleted_messages"] == 3
+            async for session in test_db.create_session():
+                # Группа удалена
+                await GroupDatabaseAssertions.assert_group_not_exists(session, group_id)
+                # Сообщения удалены
+                await DatabaseAssertions.assert_not_exists(
+                    session, Messages, group_id=group_id
+                )
+
+        @pytest.mark.asyncio
+        async def test_delete_group_not_creator_fail(
+            self,
+            auth_client_user_3,  # Участник, не создатель
+            created_group_user1_user3,
+        ):
+            """Тест: не-создатель не может удалить группу"""
+            response = await auth_client_user_3.delete(
+                TestGroups.delete_group_url(created_group_user1_user3.id)
+            )
+            HttpAssertions.assert_error_response(
+                response, "Только создатель может выполнить данное действие", 403
+            )
+
+        @pytest.mark.asyncio
+        async def test_delete_group_not_admin_fail(
+            self,
+            auth_client_user_2,  # Не в группе
+            created_group_user1_user3,
+        ):
+            """Тест: не-участник не может удалить группу"""
+            response = await auth_client_user_2.delete(
+                TestGroups.delete_group_url(created_group_user1_user3.id)
+            )
+            HttpAssertions.assert_error_response(
+                response, "Только создатель может выполнить данное действие", 403
+            )
+
+        @pytest.mark.asyncio
+        async def test_delete_group_not_found(
+            self,
+            auth_client_user_1,
+        ):
+            """Тест: удаление несуществующей группы -> 404"""
+            response = await auth_client_user_1.delete(
+                TestGroups.delete_group_url(uuid4())
             )
             HttpAssertions.assert_not_found_error(response, "Группа не найдена")
