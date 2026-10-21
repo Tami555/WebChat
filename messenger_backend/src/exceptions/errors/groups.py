@@ -68,6 +68,16 @@ class UserIsNotGroupAdminError(BaseAppException):
         )
 
 
+class UserIsNotGroupCreatorError(BaseAppException):
+    """Только создатель может выполнить данное действие"""
+
+    def __init__(self):
+        super().__init__(
+            message="Только создатель может выполнить данное действие",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
 class CannotModifyGroupCreatorError(BaseAppException):
     """Попытка изменить роль или удалить создателя группы"""
 

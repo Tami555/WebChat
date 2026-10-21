@@ -130,3 +130,14 @@ async def leave_group(
     """Выйти из группы"""
     await GroupService.leave_group(user, group_id, session)
     return {"status": "ok"}
+
+
+@router.delete("/{group_id}")
+async def delete_group(
+    group_id: UUID,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Полностью удалить группу (только создатель)"""
+    deleted_messages = await GroupService.delete_group(user, group_id, session)
+    return {"status": "ok", "deleted_messages": deleted_messages}

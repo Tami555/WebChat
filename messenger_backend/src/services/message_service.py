@@ -283,3 +283,22 @@ class MessageService:
             user=user, session=session, message_data=message_data
         )
         return new_message
+
+    @staticmethod
+    async def delete_all_messages_in_chat(
+        chat_id: UUID,
+        chat_type: ChatType,
+        session: AsyncSession,
+    ) -> int:
+        """
+        Полное удаление всех сообщений из чата + удаление всех файлов чата.
+        Возвращает количество удалённых сообщений.
+        """
+        deleted_count = await MessageCRUD.delete_messages_by_chat(
+            session=session,
+            group_id=chat_id if chat_type is ChatType.GROUP else None,
+            dialog_id=chat_id if chat_type is ChatType.DIALOGS else None,
+        )
+        # Удаляем файлы сообщений
+        await FileService.delete_all_chat_files(chat_id)
+        return deleted_count

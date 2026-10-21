@@ -13,7 +13,7 @@ from src.schemas import (
     AddGroupMembersRequest,
     UpdateMemberRoleRequest,
 )
-from src.schemas.enums import MessageType
+from src.schemas.enums import MessageType, ChatType
 from src.exceptions import (
     CreatorIsNotMemberError,
     RecurringMembersError,
@@ -25,6 +25,7 @@ from src.exceptions import (
     CannotModifyGroupCreatorError,
     GroupMemberNotFoundError,
     GroupIsPrivateError,
+    UserIsNotGroupCreatorError,
 )
 from src.services.file_service import FileService
 from src.services.user_service import UserService
@@ -353,5 +354,30 @@ class GroupService:
 
         await GroupCRUD.remove_member(group_id, user.id, session)
 
-    # TODO:
-    # Удаление группы
+    @staticmethod
+    async def delete_group(
+        user: Users,
+        group_id: UUID,
+        session: AsyncSession,
+    ) -> int:
+        """Полное удаление группы (только создатель). Возвращает количество удалённых сообщений."""
+        from src.services.message_service import MessageService
+
+        group = await GroupService.get_group_by_id(group_id, session)
+        # Проверка на создателя
+        if group.created_by != user.id:
+            raise UserIsNotGroupCreatorError()
+
+        # Удаляем все сообщения и файлы
+        deleted_msgs = await MessageService.delete_all_messages_in_chat(
+            chat_id=group_id,
+            chat_type=ChatType.GROUP,
+            session=session,
+        )
+        # Удаляем аву группы
+        if group.avatar_url:
+            await FileService.delete_group_avatar(group.avatar_url)
+
+        # Удаляем группу
+        await GroupCRUD.delete_group(group_id, session)
+        return deleted_msgs

@@ -193,3 +193,10 @@ class GroupCRUD:
         await session.commit()
         await session.refresh(member)
         return member
+
+    @staticmethod
+    async def delete_group(group_id: UUID, session: AsyncSession) -> None:
+        """Удаление группы (каскадно удалятся участники)"""
+        stmt = delete(Groups).where(Groups.id == group_id)
+        await session.execute(stmt)
+        await session.commit()

@@ -19,6 +19,7 @@ __all__ = (
     "CannotModifyGroupCreatorError",
     "GroupMemberNotFoundError",
     "GroupIsPrivateError",
+    "UserIsNotGroupCreatorError",
     "DialogAlreadyExistsError",
     "DialogWithOneUserError",
     "DialogNotFoundError",
@@ -58,6 +59,7 @@ from .errors.groups import (
     CannotModifyGroupCreatorError,
     GroupMemberNotFoundError,
     GroupIsPrivateError,
+    UserIsNotGroupCreatorError,
 )
 from .errors.dialogs import (
     DialogAlreadyExistsError,

@@ -110,3 +110,10 @@ class FileService:
             return False
         file_manager = get_file_manager()
         return await file_manager.delete_file(Path(avatar_url))
+
+    @staticmethod
+    async def delete_all_chat_files(chat_id: UUID) -> bool:
+        """Удаляет директорию со всеми файлами чата"""
+        file_manager = get_file_manager()
+        dir_path = Path("user_files") / "chats" / str(chat_id)
+        return await file_manager.delete_directory(dir_path)
