@@ -19,6 +19,18 @@ class UserService:
         return user
 
     @staticmethod
+    async def get_users_by_ids(
+        users_ids: list[UUID], session: AsyncSession
+    ) -> list[Users]:
+        """Получение списка пользователей по id"""
+        users = await UserCRUD.get_users_by_ids(users_ids, session)
+        found_ids = {u.id for u in users}
+        for user_id in users_ids:
+            if user_id not in found_ids:
+                raise UserNotFoundError(user_id=user_id)
+        return users
+
+    @staticmethod
     async def get_user_ids_by_usernames(
         usernames: Iterable[str], session: AsyncSession
     ) -> list[UUID]:

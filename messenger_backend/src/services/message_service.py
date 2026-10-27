@@ -16,6 +16,7 @@ from src.schemas import (
     UploadMessageFileRequest,
     DownloadMessageFileRequest,
     DeleteMessageFileRequest,
+    SystemMessageCreateRequest,
 )
 from src.exceptions import (
     MissedDataForMessageTypeError,
@@ -222,6 +223,39 @@ class MessageService:
         return await MessageCRUD.get_message_by_id_with_relationships(
             created_message.id, session
         )
+
+    @staticmethod
+    async def create_system_message(
+        session: AsyncSession,
+        message_data: SystemMessageCreateRequest,
+    ) -> Messages:
+        """Создание системного сообщения (без отправителя)"""
+        new_message = Messages(
+            sender_id=None,
+            dialog_id=(
+                message_data.chat_id
+                if message_data.chat_type == ChatType.DIALOGS
+                else None
+            ),
+            group_id=(
+                message_data.chat_id
+                if message_data.chat_type == ChatType.GROUP
+                else None
+            ),
+            type=MessageType.SYSTEM,
+            content=message_data.content,
+            created_at=message_data.created_at,
+        )
+        created_message = await MessageCRUD.create_message(new_message, session)
+
+        # Обновляем last_message в чате
+        await MessageService.update_chat_last_message(
+            chat_id=message_data.chat_id,
+            chat_type=message_data.chat_type,
+            last_message=created_message,
+            session=session,
+        )
+        return created_message
 
     @staticmethod
     async def update_chat_last_message(

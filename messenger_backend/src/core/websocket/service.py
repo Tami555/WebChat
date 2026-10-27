@@ -9,6 +9,9 @@ from src.schemas import (
     MessageCreateRequest,
     MessageResponse,
     TypingStatusResponse,
+    SystemMessageCreateRequest,
+    SystemMessageResponse,
+    BroadcastResult,
 )
 from src.services import MessageService, UserService
 from src.models import Users
@@ -23,6 +26,56 @@ logger = logging.getLogger(__name__)
 
 class WebsocketService:
     """Сервис Websocket"""
+
+    @staticmethod
+    async def _broadcast_to_chat_participants(
+        chat_id: UUID,
+        chat_type: ChatType,
+        message_response,
+        session: AsyncSession,
+        sender_username: str | None = None,
+    ) -> BroadcastResult:
+        """
+        Рассылка сообщения участникам чата.
+        Возвращает результат: кто онлайн, кто офлайн, кому доставлено, кто прочитал.
+        """
+        # Получаем участников и онлайн-статус
+        chat_participants = await MessageService.get_chat_participants_username(
+            chat_id=chat_id, chat_type=chat_type, session=session
+        )
+        all_online = await online_redis.get_all_online()
+
+        online_users = chat_participants & all_online
+        offline_users = chat_participants - all_online
+
+        delivered_to = set()
+        read_by = set()
+        # Рассылка
+        for username in online_users:
+            if username == sender_username:
+                continue  # Отправителю не отправляем
+
+            success = await websocket_manager.send_to_user(
+                to_username=username,
+                data=message_response.model_dump_json(),
+            )
+            if success:
+                delivered_to.add(username)
+                # Проверяем, находится ли пользователь сейчас в этом чате
+                current_chat = websocket_manager.get_user_chat(username)
+                if (
+                    current_chat is not None
+                    and current_chat[0] == chat_id
+                    and current_chat[1] == chat_type
+                ):
+                    read_by.add(username)
+
+        return BroadcastResult(
+            online_users=online_users,
+            offline_users=offline_users,
+            delivered_to=delivered_to,
+            read_by=read_by,
+        )
 
     @staticmethod
     async def process_message(
@@ -49,42 +102,21 @@ class WebsocketService:
 
         message_response = MessageResponse.model_validate(created_message)
 
-        # Получаем участников чата. Кто онлайн/офлайн
-        chat_participants = await MessageService.get_chat_participants_username(
+        # Рассылаем
+        result = await WebsocketService._broadcast_to_chat_participants(
             chat_id=message_data.chat_id,
             chat_type=message_data.chat_type,
+            message_response=message_response,
             session=session,
+            sender_username=sender_user.username,
         )
-        all_online = await online_redis.get_all_online()
-        online_users = chat_participants & all_online
-        offline_users = chat_participants - all_online
-
-        # Отправляем онлайн-пользователям через ws
-        delivered_to = set()  # Доставлено
-        read_by = set()  # Прочитано
-        for username in online_users:
-            if username != sender_user.username:  # Не отправляем отправителю
-                success = await websocket_manager.send_to_user(
-                    to_username=username,
-                    data=message_response.model_dump_json(),
-                )
-                if success:
-                    delivered_to.add(username)
-                    current_chat = websocket_manager.get_user_chat(username)
-                    if (
-                        current_chat is not None
-                        and current_chat[0] == message_data.chat_id
-                        and current_chat[1] == message_data.chat_type
-                    ):
-                        read_by.add(username)
-
         # Кто не прочитал сообщение
-        not_read_by = (offline_users | (online_users - read_by)) - {
-            sender_user.username
-        }
+        not_read_by = result.not_read_by - {sender_user.username}
 
         # Создаем статусы чтения
-        read_users_ids = await UserService.get_user_ids_by_usernames(read_by, session)
+        read_users_ids = await UserService.get_user_ids_by_usernames(
+            result.read_by, session
+        )
         not_read_users_ids = await UserService.get_user_ids_by_usernames(
             not_read_by, session
         )
@@ -96,9 +128,9 @@ class WebsocketService:
             session=session,
         )
         # Отправляем push-уведомления офлайн-пользователям
-        notification_to = (offline_users | (online_users - delivered_to)) - {
-            sender_user.username
-        }
+        notification_to = (
+            result.offline_users | (result.online_users - result.delivered_to)
+        ) - {sender_user.username}
         if notification_to:
             notification_manager = get_notification_manager()
             await notification_manager.send_bulk_notification(
@@ -106,6 +138,28 @@ class WebsocketService:
                 message=message_response,
             )
 
+        return message_response.model_dump_json()
+
+    @staticmethod
+    async def process_system_message(
+        system_message_data: SystemMessageCreateRequest,
+        session: AsyncSession,
+    ) -> dict | str:
+        """Создание и отправка системного сообщения всем участникам"""
+
+        created_message = await MessageService.create_system_message(
+            session=session,
+            message_data=system_message_data,
+        )
+        message_response = SystemMessageResponse.model_validate(created_message)
+
+        # Рассылка
+        await WebsocketService._broadcast_to_chat_participants(
+            chat_id=system_message_data.chat_id,
+            chat_type=system_message_data.chat_type,
+            message_response=message_response,
+            session=session,
+        )
         return message_response.model_dump_json()
 
     @staticmethod
@@ -123,28 +177,22 @@ class WebsocketService:
             chat_type=chat_type,
             session=session,
         )
-        chat_participants = await MessageService.get_chat_participants_username(
-            chat_id=chat_id,
-            chat_type=chat_type,
-            session=session,
-        )
-        all_online = await online_redis.get_all_online()
-        online_users = chat_participants & all_online
 
-        # Отправляем
         sender_username = sender_user.username
-        response = TypingStatusResponse(
+        message_response = TypingStatusResponse(
             chat_id=chat_id,
             chat_type=chat_type,
             is_typing=is_typing,
             username=sender_username,
         )
-        for participant in online_users:
-            if participant != sender_username:
-                await websocket_manager.send_to_user(
-                    to_username=participant,
-                    data=response.model_dump_json(),
-                )
+        # Рассылка
+        await WebsocketService._broadcast_to_chat_participants(
+            chat_id=chat_id,
+            chat_type=chat_type,
+            message_response=message_response,
+            session=session,
+            sender_username=sender_username,
+        )
 
     @staticmethod
     async def join_to_chat(

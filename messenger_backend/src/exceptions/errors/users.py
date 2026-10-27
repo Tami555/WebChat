@@ -1,3 +1,4 @@
+from uuid import UUID
 from fastapi import status
 
 from ..base import BaseAppException
@@ -30,7 +31,10 @@ class UsernameAlreadyExistsError(UserAlreadyExistsError):
 class UserNotFoundError(BaseAppException):
     """Пользователь не найден"""
 
-    def __init__(self):
-        super().__init__(
-            message="Пользователь не найден", status_code=status.HTTP_404_NOT_FOUND
+    def __init__(self, user_id: UUID | None = None):
+        msg = (
+            "Пользователь не найден"
+            if user_id is None
+            else f"Пользователь c {user_id} не найден"
         )
+        super().__init__(message=msg, status_code=status.HTTP_404_NOT_FOUND)

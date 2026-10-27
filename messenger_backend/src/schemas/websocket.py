@@ -64,3 +64,17 @@ class MessageContentRequest(WebSocketMessageRequest):
 
     type: Literal[WebSocketMessageType.MESSAGE] = WebSocketMessageType.MESSAGE
     message: MessageCreateRequest
+
+
+class BroadcastResult(BaseModel):
+    """Схема результата рассылки сообщения участникам чата"""
+
+    online_users: set[str] = Field(default_factory=set)
+    offline_users: set[str] = Field(default_factory=set)
+    delivered_to: set[str] = Field(default_factory=set)
+    read_by: set[str] = Field(default_factory=set)
+
+    @property
+    def not_read_by(self) -> set[str]:
+        """Те, кто не прочитал (офлайн + онлайн, но не в этом чате)"""
+        return self.offline_users | (self.online_users - self.read_by)

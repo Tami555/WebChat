@@ -1,6 +1,6 @@
 import datetime
 from uuid import UUID
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from fastapi import Form
 
 from .enums import MessageType, ChatType
@@ -11,7 +11,7 @@ from .sticker import ShortStickerResponse, StickerResponse
 class ShortMessageResponse(BaseModel):
     """Схема сообщения (не полная)"""
 
-    sender: ShortUserResponse
+    sender: ShortUserResponse | None = None
     type: MessageType = MessageType.TEXT
     created_at: datetime.datetime
     content: str | None = None
@@ -42,7 +42,7 @@ class MessageCreateRequest(BaseModel):
     sticker_id: UUID | None = None
     reply_message_id: UUID | None = None
     file_url: str | None = None
-    created_at: datetime.datetime
+    created_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
     @staticmethod
     def create_message_by_form(
@@ -65,6 +65,25 @@ class MessageCreateRequest(BaseModel):
             file_url=file_url,
             created_at=created_at,
         )
+
+
+class SystemMessageResponse(BaseModel):
+    """Схема системного сообщения"""
+
+    type: MessageType = MessageType.SYSTEM
+    content: str
+    created_at: datetime.datetime
+
+    model_config = ConfigDict(from_attributes=True)
+
+
+class SystemMessageCreateRequest(BaseModel):
+    """Схема создания системного сообщения"""
+
+    chat_id: UUID
+    chat_type: ChatType
+    content: str
+    created_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
 
 
 class MediaMessagesResponse(BaseModel):

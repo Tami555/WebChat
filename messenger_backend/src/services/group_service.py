@@ -12,6 +12,7 @@ from src.schemas import (
     UpdateGroupRequest,
     AddGroupMembersRequest,
     UpdateMemberRoleRequest,
+    SystemMessageCreateRequest,
 )
 from src.schemas.enums import MessageType, ChatType
 from src.exceptions import (
@@ -101,6 +102,23 @@ class GroupService:
         """Получение username-участников группы"""
         group = await GroupService.get_group_with_members(group_id, session)
         return {member.member.username for member in group.group_members}
+
+    @staticmethod
+    async def send_system_message_about_group(
+        group_id: UUID, content: str, session: AsyncSession
+    ) -> None:
+        """Отправка системного сообщения об изменении в группе"""
+        from src.core.websocket.service import WebsocketService
+
+        message = SystemMessageCreateRequest(
+            chat_id=group_id,
+            chat_type=ChatType.GROUP,
+            content=content,
+        )
+        await WebsocketService.process_system_message(
+            system_message_data=message,
+            session=session,
+        )
 
     @staticmethod
     async def create_group(
@@ -269,6 +287,14 @@ class GroupService:
 
         await GroupCRUD.add_members(group_id, data.members, session)
 
+        # Отправка системного сообщения
+        new_users = await UserService.get_users_by_ids(data.members, session)
+        for new_user in new_users:
+            content = f"{new_user.username} добавлен(а) в группу"
+            await GroupService.send_system_message_about_group(
+                group_id, content, session
+            )
+
     @staticmethod
     async def remove_member(
         user: Users,
@@ -292,6 +318,11 @@ class GroupService:
             raise CannotModifyGroupCreatorError()
 
         await GroupCRUD.remove_member(group_id, target_user_id, session)
+
+        # Отправка системного сообщения
+        removed_user = await UserCRUD.get_user_by_id(target_user_id, session)
+        content = f"{removed_user.username} исключен(а) из группы"
+        await GroupService.send_system_message_about_group(group_id, content, session)
 
     @staticmethod
     async def update_member_role(
@@ -335,6 +366,10 @@ class GroupService:
 
         await GroupCRUD.add_members(group_id, [user.id], session)
 
+        # Отправка системного сообщения
+        content = f"{user.username} присоединился(ась) к группе"
+        await GroupService.send_system_message_about_group(group_id, content, session)
+
     @staticmethod
     async def leave_group(
         user: Users,
@@ -353,6 +388,10 @@ class GroupService:
             raise CannotModifyGroupCreatorError()
 
         await GroupCRUD.remove_member(group_id, user.id, session)
+
+        # Отправка системного сообщения
+        content = f"{user.username} покинул(а) группу"
+        await GroupService.send_system_message_about_group(group_id, content, session)
 
     @staticmethod
     async def delete_group(
