@@ -1,4 +1,5 @@
 import datetime
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
@@ -35,6 +36,7 @@ class CreateUserRequest(RegistrationUserRequest):
 class UserInGroupResponse(BaseModel):
     """Схема пользователя в контексте группы"""
 
+    id: UUID
     username: str
     avatar_url: str | None = None
     is_online: bool

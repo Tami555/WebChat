@@ -186,6 +186,7 @@ class GroupService:
         for m in group.group_members:
             members.append(
                 UserInGroupResponse(
+                    id=m.member.id,
                     username=m.member.username,
                     avatar_url=m.member.avatar_url,
                     is_online=m.member.is_online,
