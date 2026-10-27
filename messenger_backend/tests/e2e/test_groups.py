@@ -49,6 +49,10 @@ class TestGroups:
         return url_builder.groups(str(group_id), "members", str(user_id), "role")
 
     @staticmethod
+    def get_transfer_owner_url(group_id):
+        return url_builder.groups(str(group_id), "transfer-owner")
+
+    @staticmethod
     def get_join_url(group_id):
         return url_builder.groups(str(group_id), "join")
 
@@ -1386,3 +1390,153 @@ class TestGroups:
                 TestGroups.delete_group_url(uuid4())
             )
             HttpAssertions.assert_not_found_error(response, "Группа не найдена")
+
+    class TestTransferOwnership:
+        """Тесты передачи прав создателя группы"""
+
+        @pytest.mark.asyncio
+        async def test_transfer_ownership_success(
+            self,
+            redis_connect,
+            created_user_1,
+            auth_client_user_1,  # Создатель
+            created_group_user1_user3,
+            created_user_3,  # Новый создатель
+            test_db,
+        ):
+            """Тест: успешная передача прав создателя"""
+            group_id = created_group_user1_user3.id
+            data = {"new_creator_id": str(created_user_3.id)}
+
+            response = await auth_client_user_1.post(
+                TestGroups.get_transfer_owner_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+            async for session in test_db.create_session():
+                # Проверяем, что в БД сменился создатель
+                group = await DatabaseAssertions.assert_exists(
+                    session, Groups, id=group_id
+                )
+                assert group.created_by == created_user_3.id
+
+                # Проверяем, что новый создатель — админ
+                await GroupDatabaseAssertions.assert_member_role(
+                    session, group_id, created_user_3.id, GroupMemberRole.ADMIN
+                )
+                # Проверяем, что старый создатель стал просто админом
+                await GroupDatabaseAssertions.assert_member_role(
+                    session, group_id, created_user_1.id, GroupMemberRole.ADMIN
+                )
+                # Проверяем системное сообщение
+                await GroupDatabaseAssertions.assert_group_last_message_is_system(
+                    session,
+                    group_id,
+                    f"{created_user_1.username} передал(а) права создателя группы пользователю {created_user_3.username}",
+                )
+
+        @pytest.mark.asyncio
+        async def test_transfer_ownership_to_self_fail(
+            self,
+            auth_client_user_1,  # Создатель
+            created_group_user1_user3,
+            created_user_1,
+        ):
+            """Тест: нельзя передать права самому себе"""
+            group_id = created_group_user1_user3.id
+            data = {"new_creator_id": str(created_user_1.id)}
+
+            response = await auth_client_user_1.post(
+                TestGroups.get_transfer_owner_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_error_response(
+                response, "Вы уже являетесь создателем этой группы", 400
+            )
+
+        @pytest.mark.asyncio
+        async def test_transfer_ownership_not_creator_fail(
+            self,
+            auth_client_user_3,  # Участник, не создатель
+            created_group_user1_user3,
+            created_user_1,
+        ):
+            """Тест: только создатель может передать права"""
+            group_id = created_group_user1_user3.id
+            data = {"new_creator_id": str(created_user_1.id)}
+
+            response = await auth_client_user_3.post(
+                TestGroups.get_transfer_owner_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_error_response(
+                response, "Только создатель может выполнить данное действие", 403
+            )
+
+        @pytest.mark.asyncio
+        async def test_transfer_ownership_new_creator_not_member_fail(
+            self,
+            auth_client_user_1,  # Создатель
+            created_group_user1_user3,
+            created_user_2,  # НЕ участник группы
+        ):
+            """Тест: нельзя передать права пользователю, который не в группе"""
+            group_id = created_group_user1_user3.id
+            data = {"new_creator_id": str(created_user_2.id)}
+
+            response = await auth_client_user_1.post(
+                TestGroups.get_transfer_owner_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_not_found_error(
+                response, "Участник не найден в этой группе"
+            )
+
+        @pytest.mark.asyncio
+        async def test_transfer_ownership_group_not_found(
+            self,
+            auth_client_user_1,
+            created_user_3,
+        ):
+            """Тест: передача прав в несуществующей группе"""
+            group_id = uuid4()
+            data = {"new_creator_id": str(created_user_3.id)}
+
+            response = await auth_client_user_1.post(
+                TestGroups.get_transfer_owner_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_not_found_error(response, "Группа не найдена")
+
+        @pytest.mark.asyncio
+        async def test_transfer_ownership_then_old_creator_can_leave(
+            self,
+            redis_connect,
+            auth_client_user_1,  # Бывший создатель
+            created_group_user1_user3,
+            created_user_3,  # Новый создатель
+            created_user_1,
+            test_db,
+        ):
+            """Тест: после передачи прав старый создатель может выйти из группы"""
+            group_id = created_group_user1_user3.id
+
+            # Передаём права
+            data = {"new_creator_id": str(created_user_3.id)}
+            response = await auth_client_user_1.post(
+                TestGroups.get_transfer_owner_url(group_id),
+                json=data,
+            )
+            HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+            # Старый создатель выходит из группы
+            response = await auth_client_user_1.delete(
+                TestGroups.get_leave_url(group_id)
+            )
+            HttpAssertions.assert_success_response(response, dict)
+
+            async for session in test_db.create_session():
+                await GroupDatabaseAssertions.assert_member_not_in_group(
+                    session, group_id, created_user_1.id
+                )
