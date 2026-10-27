@@ -3,7 +3,7 @@ from typing import Optional, TypeVar
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Messages, Dialogs, Groups, GroupMembers
-from src.schemas.enums import GroupMemberRole
+from src.schemas.enums import GroupMemberRole, MessageType
 from src.crud import MessageCRUD
 
 T = TypeVar("T")
@@ -112,11 +112,28 @@ class MessageDatabaseAssertions:
         sticker_id: UUID,
     ):
         """Проверяет, что сообщение типа STICKER имеет sticker_id"""
-        from src.schemas.enums import MessageType
-
         message = await MessageCRUD.get_message_by_id(message_id, session)
         assert message.type == MessageType.STICKER
         assert message.sticker_id == sticker_id
+
+    @staticmethod
+    async def assert_message_is_system(
+        session: AsyncSession,
+        message_id: UUID,
+        expected_content: str,
+    ):
+        """Проверяет, что сообщение системное и содержит нужный текст"""
+
+        message = await DatabaseAssertions.assert_exists(
+            session, Messages, id=message_id
+        )
+        assert message.type == MessageType.SYSTEM
+        assert message.content == expected_content
+        assert (
+            message.sender_id is None
+        ), "У системного сообщения не должно быть отправителя"
+
+        return message
 
 
 class DialogDatabaseAssertions:
@@ -194,7 +211,9 @@ class GroupDatabaseAssertions:
 
     @staticmethod
     async def assert_last_message(
-        session: AsyncSession, group_id: UUID, last_message_id: UUID
+        session: AsyncSession,
+        group_id: UUID,
+        last_message_id: UUID,
     ):
         """Проверяет, последнее сообщение в группе по его id"""
         group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
@@ -263,3 +282,20 @@ class GroupDatabaseAssertions:
             group_id=group_id,
             user_id=user_id,
         )
+
+    @staticmethod
+    async def assert_group_last_message_is_system(
+        session: AsyncSession,
+        group_id: UUID,
+        expected_content: str,
+    ):
+        """Проверяет, что последнее сообщение в группе — системное и содержит нужный текст"""
+
+        group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
+        assert group.last_message_id is not None, "У группы нет last_message"
+        message = await MessageDatabaseAssertions.assert_message_is_system(
+            session,
+            group.last_message_id,
+            expected_content,
+        )
+        return message

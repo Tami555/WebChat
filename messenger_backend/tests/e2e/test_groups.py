@@ -852,6 +852,7 @@ class TestGroups:
             @pytest.mark.asyncio
             async def test_add_members_success(
                 self,
+                redis_connect,
                 auth_client_user_1,
                 created_group_user1_user3,
                 created_user_2,
@@ -870,6 +871,12 @@ class TestGroups:
                 async for session in test_db.create_session():
                     await GroupDatabaseAssertions.assert_member_in_group(
                         session, created_group_user1_user3.id, created_user_2.id
+                    )
+                    # Проверка системного сообщения
+                    await GroupDatabaseAssertions.assert_group_last_message_is_system(
+                        session,
+                        created_group_user1_user3.id,
+                        f"{created_user_2.username} добавлен(а) в группу",
                     )
 
             @pytest.mark.asyncio
@@ -946,6 +953,7 @@ class TestGroups:
             @pytest.mark.asyncio
             async def test_remove_member_success(
                 self,
+                redis_connect,
                 auth_client_user_1,  # Главный админ
                 group_with_roles,
                 created_user_3,  # Простой участник
@@ -961,10 +969,17 @@ class TestGroups:
                     await GroupDatabaseAssertions.assert_member_not_in_group(
                         session, group_with_roles.id, created_user_3.id
                     )
+                    # Проверка системного сообщения
+                    await GroupDatabaseAssertions.assert_group_last_message_is_system(
+                        session,
+                        group_with_roles.id,
+                        f"{created_user_3.username} исключен(а) из группы",
+                    )
 
             @pytest.mark.asyncio
             async def test_remove_other_admin_success(
                 self,
+                redis_connect,
                 auth_client_user_1,  # Главный админ
                 group_with_roles,
                 created_user_2,  # Другой админ
@@ -979,6 +994,12 @@ class TestGroups:
                 async for session in test_db.create_session():
                     await GroupDatabaseAssertions.assert_member_not_in_group(
                         session, group_with_roles.id, created_user_2.id
+                    )
+                    # Проверка системного сообщения
+                    await GroupDatabaseAssertions.assert_group_last_message_is_system(
+                        session,
+                        group_with_roles.id,
+                        f"{created_user_2.username} исключен(а) из группы",
                     )
 
             @pytest.mark.asyncio
@@ -1148,6 +1169,7 @@ class TestGroups:
         @pytest.mark.asyncio
         async def test_join_public_group_success(
             self,
+            redis_connect,
             created_user_2,
             auth_client_user_2,  # Свободный пользователь
             created_group_user1_user3,  # Публичная группа
@@ -1162,6 +1184,12 @@ class TestGroups:
             async for session in test_db.create_session():
                 await GroupDatabaseAssertions.assert_member_in_group(
                     session, created_group_user1_user3.id, created_user_2.id
+                )
+                # Проверка системного сообщения
+                await GroupDatabaseAssertions.assert_group_last_message_is_system(
+                    session,
+                    created_group_user1_user3.id,
+                    f"{created_user_2.username} присоединился(ась) к группе",
                 )
 
         @pytest.mark.asyncio
@@ -1207,6 +1235,7 @@ class TestGroups:
         @pytest.mark.asyncio
         async def test_leave_group_success(
             self,
+            redis_connect,
             created_user_3,
             auth_client_user_3,  # Участник
             created_group_user1_user3,
@@ -1221,6 +1250,12 @@ class TestGroups:
             async for session in test_db.create_session():
                 await GroupDatabaseAssertions.assert_member_not_in_group(
                     session, created_group_user1_user3.id, created_user_3.id
+                )
+                # Проверка системного сообщения
+                await GroupDatabaseAssertions.assert_group_last_message_is_system(
+                    session,
+                    created_group_user1_user3.id,
+                    f"{created_user_3.username} покинул(а) группу",
                 )
 
         @pytest.mark.asyncio
