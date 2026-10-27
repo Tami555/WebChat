@@ -73,3 +73,9 @@ class UpdateMemberRoleRequest(BaseModel):
     """Схема изменения роли участника"""
 
     role: GroupMemberRole
+
+
+class TransferOwnershipRequest(BaseModel):
+    """Схема передачи прав создателя группы"""
+
+    new_creator_id: UUID

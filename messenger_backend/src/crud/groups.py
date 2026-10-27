@@ -200,3 +200,17 @@ class GroupCRUD:
         stmt = delete(Groups).where(Groups.id == group_id)
         await session.execute(stmt)
         await session.commit()
+
+    @staticmethod
+    async def transfer_ownership(
+        group: Groups,
+        new_creator_id: UUID,
+        session: AsyncSession,
+    ) -> Groups:
+        """Передача прав владельца группы"""
+        group.created_by = new_creator_id
+        session.add(group)
+
+        await session.commit()
+        await session.refresh(group)
+        return group

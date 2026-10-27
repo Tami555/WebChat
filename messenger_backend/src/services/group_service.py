@@ -13,8 +13,9 @@ from src.schemas import (
     AddGroupMembersRequest,
     UpdateMemberRoleRequest,
     SystemMessageCreateRequest,
+    TransferOwnershipRequest,
 )
-from src.schemas.enums import MessageType, ChatType
+from src.schemas.enums import MessageType, ChatType, GroupMemberRole
 from src.exceptions import (
     CreatorIsNotMemberError,
     RecurringMembersError,
@@ -27,6 +28,7 @@ from src.exceptions import (
     GroupMemberNotFoundError,
     GroupIsPrivateError,
     UserIsNotGroupCreatorError,
+    AlreadyGroupCreatorError,
 )
 from src.services.file_service import FileService
 from src.services.user_service import UserService
@@ -189,6 +191,7 @@ class GroupService:
                     id=m.member.id,
                     username=m.member.username,
                     avatar_url=m.member.avatar_url,
+                    is_creator=m.member.id == group.created_by,
                     is_online=m.member.is_online,
                     last_seen=m.member.last_seen,
                     role=m.role,
@@ -421,3 +424,49 @@ class GroupService:
         # Удаляем группу
         await GroupCRUD.delete_group(group_id, session)
         return deleted_msgs
+
+    @staticmethod
+    async def transfer_ownership(
+        user: Users,
+        group_id: UUID,
+        data: TransferOwnershipRequest,
+        session: AsyncSession,
+    ) -> Groups:
+        """Передача прав создателя группы"""
+        group = await GroupService.get_group_by_id(group_id, session)
+
+        if group.created_by != user.id:
+            raise UserIsNotGroupCreatorError()
+
+        # Проверка: нельзя передать права самому себе
+        if data.new_creator_id == user.id:
+            raise AlreadyGroupCreatorError()
+
+        # Проверка: новый создатель — участник группы
+        new_member = await GroupCRUD.get_group_member(
+            group_id, data.new_creator_id, session
+        )
+        if not new_member:
+            raise GroupMemberNotFoundError()
+
+        # Передача прав
+        updated_group = await GroupCRUD.transfer_ownership(
+            group=group,
+            new_creator_id=data.new_creator_id,
+            session=session,
+        )
+
+        # Роль нового создателя - админ
+        await GroupCRUD.update_member_role(
+            group_id=group_id,
+            user_id=data.new_creator_id,
+            new_role=GroupMemberRole.ADMIN,
+            session=session,
+        )
+
+        # Системное сообщение
+        new_creator_user = await UserCRUD.get_user_by_id(data.new_creator_id, session)
+        content = f"{user.username} передал(а) права создателя группы пользователю {new_creator_user.username}"
+        await GroupService.send_system_message_about_group(group_id, content, session)
+
+        return updated_group

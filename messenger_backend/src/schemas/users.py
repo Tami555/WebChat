@@ -40,6 +40,7 @@ class UserInGroupResponse(BaseModel):
     username: str
     avatar_url: str | None = None
     is_online: bool
+    is_creator: bool
     last_seen: datetime.datetime
     role: GroupMemberRole
 

@@ -88,6 +88,16 @@ class CannotModifyGroupCreatorError(BaseAppException):
         )
 
 
+class AlreadyGroupCreatorError(BaseAppException):
+    """Пользователь уже является создателем группы"""
+
+    def __init__(self):
+        super().__init__(
+            message="Вы уже являетесь создателем этой группы",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
 class GroupMemberNotFoundError(BaseAppException):
     """Участник группы не найден"""
 

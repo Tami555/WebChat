@@ -13,6 +13,7 @@ from src.schemas import (
     UpdateGroupRequest,
     AddGroupMembersRequest,
     UpdateMemberRoleRequest,
+    TransferOwnershipRequest,
 )
 from src.services import GroupService
 
@@ -141,3 +142,19 @@ async def leave_group(
     """Выйти из группы"""
     await GroupService.leave_group(user, group_id, session)
     return {"status": "ok"}
+
+
+@router.post("/{group_id}/transfer-owner", response_model=ShortGroupResponse)
+async def transfer_group_ownership(
+    group_id: UUID,
+    data: TransferOwnershipRequest,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Передать права создателя группы другому участнику"""
+    return await GroupService.transfer_ownership(
+        user=user,
+        group_id=group_id,
+        data=data,
+        session=session,
+    )

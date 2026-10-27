@@ -29,6 +29,7 @@ __all__ = (
     "UpdateGroupRequest",
     "AddGroupMembersRequest",
     "UpdateMemberRoleRequest",
+    "TransferOwnershipRequest",
     "CreateGroupWithMembersRequest",
     "CreateDialogRequest",
     "DialogDetailResponse",
@@ -87,6 +88,7 @@ from .groups import (
     UpdateGroupRequest,
     AddGroupMembersRequest,
     UpdateMemberRoleRequest,
+    TransferOwnershipRequest,
 )
 from .dialogs import CreateDialogRequest, DialogDetailResponse
 from .sticker import (
