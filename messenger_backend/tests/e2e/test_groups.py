@@ -545,11 +545,6 @@ class TestGroups:
                 )
                 assert member.role.value == "member"
 
-                # Проверяем media
-                assert data.media.images == []
-                assert data.media.voices == []
-                assert data.media.files == []
-
             @pytest.mark.asyncio
             async def test_get_private_group_success_as_member(
                 self,
@@ -587,29 +582,6 @@ class TestGroups:
                     expected_message="Вы не являетесь участником группы",
                     expected_status=403,
                 )
-
-            @pytest.mark.asyncio
-            async def test_get_private_group_with_media(
-                self,
-                auth_client_user_1,
-                created_private_group_user1_user3,
-                created_message_in_private_group,
-            ):
-                """Тест: получение инфы о группе с медиа-сообщениями"""
-                group_id = created_private_group_user1_user3.id
-                response = await auth_client_user_1.get(
-                    TestGroups.get_group_detail_url(group_id)
-                )
-
-                data = HttpAssertions.assert_success_response(
-                    response=response,
-                    response_model=GroupResponse,
-                )
-
-                assert len(data.media.images) == 1
-                assert data.media.images[0] == "/test/media/image.jpg"
-                assert data.media.voices == []
-                assert data.media.files == []
 
         class TestPublicGroup:
             """Тесты для публичной группы"""

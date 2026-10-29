@@ -19,12 +19,16 @@ class TestChats:
     """Тесты чатов"""
 
     # URLs
+    get_chats_url = url_builder.chats("/")
+    create_message_url = url_builder.chats("messages", "create")
+
     @staticmethod
     def get_messages_url(chat_id: UUID):
         return url_builder.chats(str(chat_id), "messages")
 
-    get_chats_url = url_builder.chats("/")
-    create_message_url = url_builder.chats("messages", "create")
+    @staticmethod
+    def get_media_url(chat_id: UUID):
+        return url_builder.chats(str(chat_id), "media")
 
     class TestGetChats:
         """Тесты получения списка чатов"""
@@ -1485,3 +1489,187 @@ class TestChats:
                 assert response.status_code == 200
                 # Удаляем
                 FileFactory.cleanup_test_messages_files(chat_id)
+
+    class TestGetChatMedia:
+        """Тесты получения медиа-файлов чата"""
+
+        class TestGroup:
+            """Тесты для групп"""
+
+            @pytest.mark.asyncio
+            async def test_get_group_media_images_success(
+                self,
+                created_user_1,
+                auth_client_user_2,
+                created_group_user1_user2_user3,
+                test_db,
+            ):
+                """Тест: получение медиа-картинок группы"""
+                from src.schemas import MediaResponse
+                from src.crud.messages import MessageCRUD
+                from src.models.messages import Messages
+
+                group_id = created_group_user1_user2_user3.id
+
+                # Создаем 2 картинки и 1 файл
+                async for session in test_db.create_session():
+                    for i in range(2):
+                        msg = Messages(
+                            sender_id=created_user_1.id,
+                            group_id=group_id,
+                            type=MessageType.IMAGE,
+                            file_url=f"/test/image_{i}.jpg",
+                        )
+                        await MessageCRUD.create_message(msg, session)
+
+                    msg_file = Messages(
+                        sender_id=created_user_1.id,
+                        group_id=group_id,
+                        type=MessageType.FILE,
+                        file_url="/test/file.txt",
+                    )
+                    await MessageCRUD.create_message(msg_file, session)
+
+                response = await auth_client_user_2.get(
+                    TestChats.get_media_url(group_id),
+                    params={"chat_type": ChatType.GROUP, "type": "image"},
+                )
+                data = HttpAssertions.assert_success_response(response, MediaResponse)
+
+                assert data.total == 2
+                assert len(data.items) == 2
+                assert "/test/image_0.jpg" in data.items
+                assert "/test/image_1.jpg" in data.items
+                assert data.page == 1
+                assert data.limit == 50
+
+            @pytest.mark.asyncio
+            async def test_get_group_media_with_pagination(
+                self,
+                created_user_1,
+                auth_client_user_2,
+                created_group_user1_user2_user3,
+                test_db,
+            ):
+                """Тест: пагинация медиа группы"""
+                from src.schemas import MediaResponse
+                from src.crud.messages import MessageCRUD
+                from src.models.messages import Messages
+
+                group_id = created_group_user1_user2_user3.id
+
+                # Создаем 3 файла
+                async for session in test_db.create_session():
+                    for i in range(3):
+                        msg = Messages(
+                            sender_id=created_user_1.id,
+                            group_id=group_id,
+                            type=MessageType.FILE,
+                            file_url=f"/test/file_{i}.txt",
+                        )
+                        await MessageCRUD.create_message(msg, session)
+
+                # Запрашиваем 2-ю страницу по 2 элемента
+                response = await auth_client_user_2.get(
+                    TestChats.get_media_url(group_id),
+                    params={
+                        "chat_type": ChatType.GROUP,
+                        "type": "file",
+                        "page": 2,
+                        "limit": 2,
+                    },
+                )
+                data = HttpAssertions.assert_success_response(response, MediaResponse)
+
+                assert data.total == 3
+                assert len(data.items) == 1
+                assert data.page == 2
+                assert data.limit == 2
+
+            @pytest.mark.asyncio
+            async def test_get_private_group_media_not_member(
+                self,
+                auth_client_user_2,
+                created_private_group_user1_user3,
+            ):
+                """Тест: не-участник не может получить медиа приватной группы"""
+                group_id = created_private_group_user1_user3.id
+
+                response = await auth_client_user_2.get(
+                    TestChats.get_media_url(group_id),
+                    params={"chat_type": ChatType.GROUP, "type": "image"},
+                )
+                HttpAssertions.assert_error_response(
+                    response=response,
+                    expected_message="Вы не являетесь участником группы",
+                    expected_status=403,
+                )
+
+            @pytest.mark.asyncio
+            async def test_get_group_media_empty(
+                self,
+                auth_client_user_2,
+                created_group_user1_user2_user3,
+            ):
+                """Тест: пустой список медиа (нет сообщений такого типа)"""
+                from src.schemas import MediaResponse
+
+                group_id = created_group_user1_user2_user3.id
+
+                response = await auth_client_user_2.get(
+                    TestChats.get_media_url(group_id),
+                    params={"chat_type": ChatType.GROUP, "type": "voice"},
+                )
+                data = HttpAssertions.assert_success_response(response, MediaResponse)
+
+                assert data.total == 0
+                assert data.items == []
+
+        class TestDialog:
+            """Тесты для диалогов"""
+
+            @pytest.mark.asyncio
+            async def test_get_dialog_media_stub(
+                self,
+                auth_client_user_2,
+                created_dialog_user1_user2,
+            ):
+                """Заглушка: получение медиа диалога"""
+                # TODO: реализовать, когда будет логика медиа в диалогах
+                pass
+
+        class TestCommon:
+            """Общие тесты для всех чатов"""
+
+            @pytest.mark.asyncio
+            async def test_get_media_invalid_type(
+                self,
+                auth_client_user_2,
+                created_group_user1_user2_user3,
+            ):
+                """Тест: неверный тип медиа"""
+                group_id = created_group_user1_user2_user3.id
+
+                response = await auth_client_user_2.get(
+                    TestChats.get_media_url(group_id),
+                    params={"chat_type": ChatType.GROUP, "type": "invalid_type"},
+                )
+                HttpAssertions.assert_validation_error(response)
+
+            @pytest.mark.asyncio
+            async def test_get_media_unauthorized(
+                self,
+                client,
+                created_group_user1_user2_user3,
+            ):
+                """Тест: без авторизации"""
+                group_id = created_group_user1_user2_user3.id
+
+                response = await client.get(
+                    TestChats.get_media_url(group_id),
+                    params={"chat_type": ChatType.GROUP, "type": "image"},
+                )
+                HttpAssertions.assert_unauthorized_error(
+                    response=response,
+                    expected_message="Вы не авторизованы! Войдите пожалуйста в аккаунт",
+                )
