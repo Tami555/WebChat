@@ -2,6 +2,7 @@ __all__ = (
     "TokenType",
     "GroupMemberRole",
     "MessageType",
+    "AvailableMediaType",
     "ChatType",
     "WebSocketMessageType",
 )
@@ -9,6 +10,6 @@ __all__ = (
 
 from .auth import TokenType
 from .group_members import GroupMemberRole
-from .messages import MessageType
+from .messages import MessageType, AvailableMediaType
 from .chats import ChatType
 from .websocket import WebSocketMessageType

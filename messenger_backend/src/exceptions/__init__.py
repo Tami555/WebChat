@@ -15,12 +15,20 @@ __all__ = (
     "RecurringMembersError",
     "GroupNotFoundError",
     "UserIsNotGroupMemberError",
+    "UserIsNotGroupAdminError",
+    "CannotModifyGroupCreatorError",
+    "GroupMemberNotFoundError",
+    "GroupIsPrivateError",
+    "UserIsNotGroupCreatorError",
+    "AlreadyGroupCreatorError",
     "DialogAlreadyExistsError",
     "DialogWithOneUserError",
     "DialogNotFoundError",
     "UserIsNotDialogInterlocutorError",
     "NotCorrectMessageTypeForFileTypeError",
+    "InvalidAvatarFileError",
     "FilePathNotFoundError",
+    "FileSizeTooLargeError",
     "MissedDataForMessageTypeError",
     "MessageNotFoundError",
     "FutureTimestampMessageError",
@@ -49,6 +57,12 @@ from .errors.groups import (
     RecurringMembersError,
     GroupNotFoundError,
     UserIsNotGroupMemberError,
+    UserIsNotGroupAdminError,
+    CannotModifyGroupCreatorError,
+    GroupMemberNotFoundError,
+    GroupIsPrivateError,
+    UserIsNotGroupCreatorError,
+    AlreadyGroupCreatorError,
 )
 from .errors.dialogs import (
     DialogAlreadyExistsError,
@@ -56,7 +70,12 @@ from .errors.dialogs import (
     DialogNotFoundError,
     UserIsNotDialogInterlocutorError,
 )
-from .errors.files import NotCorrectMessageTypeForFileTypeError, FilePathNotFoundError
+from .errors.files import (
+    NotCorrectMessageTypeForFileTypeError,
+    InvalidAvatarFileError,
+    FilePathNotFoundError,
+    FileSizeTooLargeError,
+)
 from .errors.messages import (
     MissedDataForMessageTypeError,
     MessageNotFoundError,

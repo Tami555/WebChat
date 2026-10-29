@@ -1,8 +1,10 @@
 import datetime
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from pydantic_extra_types.phone_numbers import PhoneNumber
 
 from src.schemas.auth import RegistrationUserRequest
+from src.schemas.enums import GroupMemberRole
 
 
 class ShortUserResponse(BaseModel):
@@ -29,3 +31,17 @@ class CreateUserRequest(RegistrationUserRequest):
     """Схема создания пользователя"""
 
     last_seen: datetime.datetime | None
+
+
+class UserInGroupResponse(BaseModel):
+    """Схема пользователя в контексте группы"""
+
+    id: UUID
+    username: str
+    avatar_url: str | None = None
+    is_online: bool
+    is_creator: bool
+    last_seen: datetime.datetime
+    role: GroupMemberRole
+
+    model_config = ConfigDict(from_attributes=True)

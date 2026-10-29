@@ -7,9 +7,14 @@ from ..base import BaseAppException
 class MemberAlreadyExistsError(BaseAppException):
     """Участник уже есть в группе"""
 
-    def __init__(self, user_id: UUID):
+    def __init__(self, user_id: UUID | None = None):
+        msg = (
+            "Вы уже являетесь участником этой группы"
+            if user_id is None
+            else f"Участник с таким {user_id} уже есть в группе"
+        )
         super().__init__(
-            message=f"Участник с таким {user_id} уже есть в группе",
+            message=msg,
             status_code=status.HTTP_409_CONFLICT,
         )
 
@@ -49,5 +54,65 @@ class UserIsNotGroupMemberError(BaseAppException):
     def __init__(self):
         super().__init__(
             message="Вы не являетесь участником группы",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class UserIsNotGroupAdminError(BaseAppException):
+    """Пользователь не является администратором группы"""
+
+    def __init__(self):
+        super().__init__(
+            message="Только администратор группы может выполнять это действие",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class UserIsNotGroupCreatorError(BaseAppException):
+    """Только создатель может выполнить данное действие"""
+
+    def __init__(self):
+        super().__init__(
+            message="Только создатель может выполнить данное действие",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class CannotModifyGroupCreatorError(BaseAppException):
+    """Попытка изменить роль или удалить создателя группы"""
+
+    def __init__(self):
+        super().__init__(
+            message="Нельзя изменить роль или удалить создателя группы",
+            status_code=status.HTTP_403_FORBIDDEN,
+        )
+
+
+class AlreadyGroupCreatorError(BaseAppException):
+    """Пользователь уже является создателем группы"""
+
+    def __init__(self):
+        super().__init__(
+            message="Вы уже являетесь создателем этой группы",
+            status_code=status.HTTP_400_BAD_REQUEST,
+        )
+
+
+class GroupMemberNotFoundError(BaseAppException):
+    """Участник группы не найден"""
+
+    def __init__(self):
+        super().__init__(
+            message="Участник не найден в этой группе",
+            status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class GroupIsPrivateError(BaseAppException):
+    """Группа является приватной"""
+
+    def __init__(self):
+        super().__init__(
+            message="Группа является приватной. Вы не имейте к ней доступ",
             status_code=status.HTTP_403_FORBIDDEN,
         )

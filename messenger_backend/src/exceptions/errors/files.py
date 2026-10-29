@@ -13,6 +13,16 @@ class NotCorrectMessageTypeForFileTypeError(BaseAppException):
         )
 
 
+class InvalidAvatarFileError(BaseAppException):
+    """Невалидный файл аватара"""
+
+    def __init__(self, content_type: str):
+        super().__init__(
+            message=f"Аватар должен быть изображением, получен: {content_type}",
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        )
+
+
 class FilePathNotFoundError(BaseAppException):
     """Файл не найден"""
 
@@ -20,4 +30,14 @@ class FilePathNotFoundError(BaseAppException):
         super().__init__(
             message="Файл не найден",
             status_code=status.HTTP_404_NOT_FOUND,
+        )
+
+
+class FileSizeTooLargeError(BaseAppException):
+    """Файл превышает допустимый размер"""
+
+    def __init__(self, max_size_mb: int = 5):
+        super().__init__(
+            message=f"Размер файла не должен превышать {max_size_mb} МБ",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
         )

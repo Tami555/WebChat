@@ -19,6 +19,17 @@ class UserCRUD:
         return result.scalar_one_or_none()
 
     @staticmethod
+    async def get_users_by_ids(
+        users_ids: list[UUID], session: AsyncSession
+    ) -> list[Users]:
+        """Получение списка пользователей по id"""
+        if not users_ids:
+            return []
+        stmt = select(Users).where(Users.id.in_(users_ids))
+        result = await session.execute(stmt)
+        return list(result.scalars().all())
+
+    @staticmethod
     async def get_user_ids_by_usernames(
         usernames: Iterable[str], session: AsyncSession
     ) -> list[UUID]:

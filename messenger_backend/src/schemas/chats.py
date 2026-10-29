@@ -18,3 +18,12 @@ class AllChatsResponse(BaseModel):
 
     dialogs: list[ChatResponse]
     groups: list[ChatResponse]
+
+
+class MediaResponse(BaseModel):
+    """Схема для медиа чата"""
+
+    items: list[str]
+    total: int
+    page: int
+    limit: int

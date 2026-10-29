@@ -10,10 +10,10 @@ from src.schemas import (
     AllChatsResponse,
     MessageResponse,
     MessageCreateRequest,
-    UploadMessageFileRequest,
+    MediaResponse,
 )
-from src.services import GroupService, DialogService, MessageService, FileService
-from src.schemas.enums import ChatType
+from src.services import GroupService, DialogService, MessageService
+from src.schemas.enums import ChatType, AvailableMediaType
 
 router = APIRouter()
 
@@ -59,19 +59,34 @@ async def create_message(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Создание сообщения (для разработки)"""
-    if message_file is not None:
-        save_file_url = await FileService.upload_message_file(
-            upload_data=UploadMessageFileRequest(
-                chat_id=message_data.chat_id,
-                chat_type=message_data.chat_type,
-                file_type=message_data.message_type,
-            ),
-            upload_file=message_file,
-            user=user,
-            session=session,
-        )
-        message_data.file_url = save_file_url
-    new_message = await MessageService.create_message(
-        user=user, session=session, message_data=message_data
+    new_message = await MessageService.create_message_for_developers(
+        message_data=message_data,
+        message_file=message_file,
+        user=user,
+        session=session,
     )
     return {"status": "created", "message_id": new_message.id}
+
+
+@router.get("/{chat_id}/media", response_model=MediaResponse)
+async def get_chat_media(
+    chat_id: UUID,
+    chat_type: Annotated[ChatType, Query(...)],
+    media_type: Annotated[
+        AvailableMediaType, Query(alias="type")
+    ] = AvailableMediaType.IMAGE,
+    page: Annotated[int, Query(gt=0)] = 1,
+    limit: Annotated[int, Query(gt=0, le=100)] = 50,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Получить медиа-файлы чата с пагинацией"""
+    return await MessageService.get_chat_media(
+        user_id=user.id,
+        chat_id=chat_id,
+        chat_type=chat_type,
+        media_type=media_type,
+        page=page,
+        limit=limit,
+        session=session,
+    )

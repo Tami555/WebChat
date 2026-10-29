@@ -1,8 +1,14 @@
 import pytest
 from uuid import uuid4
 
+from src.core.config import get_settings
+from src.schemas import ShortGroupResponse
 from src.schemas.enums import ChatType, MessageType
-from tests.helpers.assertions import HttpAssertions, FilesAssertions
+from tests.helpers.assertions import (
+    HttpAssertions,
+    FilesAssertions,
+    GroupDatabaseAssertions,
+)
 from tests.helpers import url_builder, FileFactory
 
 
@@ -13,6 +19,10 @@ class TestFiles:
     upload_file_url = url_builder.files("messages", "upload_file")
     download_file_url = url_builder.files("messages", "download_file")
     delete_file_url = url_builder.files("messages", "delete_file")
+
+    @staticmethod
+    def get_avatar_url(group_id):
+        return url_builder.files("groups", str(group_id), "avatar")
 
     class TestUploadFile:
         """Тесты загрузки файла"""
@@ -962,3 +972,253 @@ class TestFiles:
                     response=response,
                     expected_message="Невалидный токен",
                 )
+
+    class TestGroupAvatar:
+        """Тесты работы с аватарками групп"""
+
+        class TestUpdateAvatar:
+            """Тесты для обновления аватарки"""
+
+            @pytest.mark.asyncio
+            async def test_update_avatar_success(
+                self,
+                created_user_1,
+                auth_client_user_1,
+                created_group_user1_user2_user3,
+                test_image_file,
+                test_db,
+            ):
+                """Тест: успешная загрузка новой авы"""
+                group_id = created_group_user1_user2_user3.id
+
+                with open(test_image_file, "rb") as f:
+                    files = {"avatar": ("avatar.jpg", f, "image/jpeg")}
+                    response = await auth_client_user_1.put(
+                        TestFiles.get_avatar_url(group_id),
+                        files=files,
+                    )
+                HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+                async for session in test_db.create_session():
+                    group = await GroupDatabaseAssertions.assert_group_exists(
+                        session=session,
+                        group_id=group_id,
+                        expected_title="Test Group",
+                        expected_created_by=created_user_1.id,
+                    )
+                    assert group.avatar_url is not None
+                    assert group.avatar_url.endswith("avatar.jpg")
+                FileFactory.cleanup_group_avatar(group_id)
+
+            @pytest.mark.asyncio
+            async def test_update_avatar_too_large(
+                self,
+                auth_client_user_1,
+                created_group_user1_user2_user3,
+                test_large_image_file,
+            ):
+                """Тест: загрузка авы большого размера"""
+                settings = get_settings()
+
+                group_id = created_group_user1_user2_user3.id
+
+                with open(test_large_image_file, "rb") as f:
+                    files = {"avatar": ("large_avatar.jpg", f, "image/jpeg")}
+                    response = await auth_client_user_1.put(
+                        TestFiles.get_avatar_url(group_id),
+                        files=files,
+                    )
+
+                HttpAssertions.assert_error_response(
+                    response=response,
+                    expected_message=f"Размер файла не должен превышать {settings.files.avatar_max_size_mb} МБ",
+                    expected_status=413,
+                )
+
+            @pytest.mark.asyncio
+            async def test_update_avatar_invalid_file(
+                self,
+                auth_client_user_1,
+                created_group_user1_user2_user3,
+                test_text_file,
+            ):
+                """Тест: загрузка не-картинки -> 415"""
+                group_id = created_group_user1_user2_user3.id
+
+                with open(test_text_file, "rb") as f:
+                    files = {"avatar": ("bad.txt", f, "text/plain")}
+                    response = await auth_client_user_1.put(
+                        TestFiles.get_avatar_url(group_id),
+                        files=files,
+                    )
+
+                HttpAssertions.assert_error_response(
+                    response=response,
+                    expected_message="Аватар должен быть изображением, получен: text/plain",
+                    expected_status=415,
+                )
+
+            @pytest.mark.asyncio
+            async def test_update_avatar_without_file(
+                self,
+                auth_client_user_1,
+                created_group_user1_user2_user3,
+            ):
+                """Тест: запрос без файла"""
+                group_id = created_group_user1_user2_user3.id
+
+                response = await auth_client_user_1.put(
+                    TestFiles.get_avatar_url(group_id),
+                )
+                HttpAssertions.assert_validation_error(response)
+
+            @pytest.mark.asyncio
+            async def test_update_avatar_not_admin(
+                self,
+                auth_client_user_2,
+                created_group_user1_user2_user3,
+                test_image_file,
+            ):
+                """Тест: загрузка аватарки не админом"""
+                group_id = created_group_user1_user2_user3.id
+
+                with open(test_image_file, "rb") as f:
+                    files = {"avatar": ("avatar.jpg", f, "image/jpeg")}
+                    response = await auth_client_user_2.put(
+                        TestFiles.get_avatar_url(group_id),
+                        files=files,
+                    )
+
+                HttpAssertions.assert_error_response(
+                    response=response,
+                    expected_message="Только администратор группы может выполнять это действие",
+                    expected_status=403,
+                )
+
+            @pytest.mark.asyncio
+            async def test_update_avatar_group_not_found(
+                self,
+                auth_client_user_1,
+                test_image_file,
+            ):
+                """Тест: загрузка авы для несуществующей группы"""
+                from uuid import uuid4
+
+                with open(test_image_file, "rb") as f:
+                    files = {"avatar": ("avatar.jpg", f, "image/jpeg")}
+                    response = await auth_client_user_1.put(
+                        TestFiles.get_avatar_url(uuid4()),
+                        files=files,
+                    )
+
+                HttpAssertions.assert_not_found_error(
+                    response=response,
+                    expected_message="Группа не найдена",
+                )
+
+        class TestDeleteAvatar:
+            """Тесты для удаления аватарки"""
+
+            @pytest.mark.asyncio
+            async def test_delete_avatar_success(
+                self,
+                auth_client_user_1,
+                created_group_with_avatar,
+                test_db,
+            ):
+                """Тест: успешное удаление авы"""
+                group_id = created_group_with_avatar.id
+
+                response = await auth_client_user_1.delete(
+                    TestFiles.get_avatar_url(group_id),
+                )
+                HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+                async for session in test_db.create_session():
+                    await GroupDatabaseAssertions.assert_group_avatar_url(
+                        session=session,
+                        group_id=group_id,
+                        expected_url=None,
+                    )
+
+            @pytest.mark.asyncio
+            async def test_delete_avatar_when_none_success(
+                self,
+                auth_client_user_1,
+                created_group_user1_user2_user3,
+            ):
+                """Тест: удаление аватарки, когда её и так нет (идемпотентно)"""
+                group_id = created_group_user1_user2_user3.id
+
+                response = await auth_client_user_1.delete(
+                    TestFiles.get_avatar_url(group_id),
+                )
+                HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+            @pytest.mark.asyncio
+            async def test_delete_avatar_not_admin(
+                self,
+                auth_client_user_2,
+                created_group_with_avatar,
+            ):
+                """Тест: удаление аватарки не админом -> 403"""
+                group_id = created_group_with_avatar.id
+
+                response = await auth_client_user_2.delete(
+                    TestFiles.get_avatar_url(group_id),
+                )
+
+                HttpAssertions.assert_error_response(
+                    response=response,
+                    expected_message="Только администратор группы может выполнять это действие",
+                    expected_status=403,
+                )
+
+            @pytest.mark.asyncio
+            async def test_delete_avatar_group_not_found(
+                self,
+                auth_client_user_1,
+            ):
+                """Тест: удаление авы для несуществующей группы"""
+                from uuid import uuid4
+
+                response = await auth_client_user_1.delete(
+                    TestFiles.get_avatar_url(uuid4()),
+                )
+
+                HttpAssertions.assert_not_found_error(
+                    response=response,
+                    expected_message="Группа не найдена",
+                )
+
+            @pytest.mark.asyncio
+            async def test_replace_existing_avatar_success(
+                self,
+                auth_client_user_1,
+                created_group_with_avatar,
+                test_image_file,
+                test_db,
+            ):
+                """Тест: замена существующей авы новой"""
+                group_id = created_group_with_avatar.id
+                first_url = created_group_with_avatar.avatar_url
+
+                with open(test_image_file, "rb") as f:
+                    files = {"avatar": ("second.jpg", f, "image/jpeg")}
+                    response = await auth_client_user_1.put(
+                        TestFiles.get_avatar_url(group_id),
+                        files=files,
+                    )
+                HttpAssertions.assert_success_response(response, ShortGroupResponse)
+
+                async for session in test_db.create_session():
+                    group = await GroupDatabaseAssertions.assert_group_exists(
+                        session=session,
+                        group_id=group_id,
+                        expected_title="Group With Avatar",
+                        expected_created_by=created_group_with_avatar.created_by,
+                    )
+                    assert group.avatar_url != first_url
+                    assert group.avatar_url.endswith("second.jpg")
+
+                FileFactory.cleanup_group_avatar(group_id)

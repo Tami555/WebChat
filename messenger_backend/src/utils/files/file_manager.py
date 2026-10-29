@@ -34,6 +34,12 @@ class FileManager(ABC):
         """Удаляет файл"""
         raise NotImplementedError()
 
+    @staticmethod
+    @abstractmethod
+    async def delete_directory(dir_path: Path) -> bool:
+        """Удаляет директорию из S3"""
+        raise NotImplementedError()
+
 
 class LocalFileManager(FileManager):
     """Работа с файлами происходит на локальном диске"""
@@ -81,6 +87,19 @@ class LocalFileManager(FileManager):
         full_path.unlink()
         return True
 
+    @staticmethod
+    async def delete_directory(dir_path: Path) -> bool:
+        """Удаляет директорию с локального диска"""
+        import shutil
+
+        full_path = FilePathHelper.get_local_base_media_dir() / dir_path
+
+        if not full_path.exists():
+            return False
+
+        shutil.rmtree(full_path)
+        return True
+
 
 class S3FileManager(FileManager):
     """Работа с файлами в S3 хранилище"""
@@ -99,6 +118,11 @@ class S3FileManager(FileManager):
     @staticmethod
     async def delete_file(file_path: Path) -> bool:
         """Удаляет файл из S3"""
+        pass
+
+    @staticmethod
+    async def delete_directory(dir_path: Path) -> bool:
+        """Удаляет директорию из S3"""
         pass
 
 

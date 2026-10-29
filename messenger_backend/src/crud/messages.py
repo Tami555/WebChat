@@ -1,6 +1,6 @@
 import datetime
 from typing import Iterable
-from sqlalchemy import select, func, update, desc
+from sqlalchemy import select, func, update, desc, delete
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -159,3 +159,20 @@ class MessageCRUD:
         stmt = select(MessageStatuses).where(MessageStatuses.message_id == message_id)
         statuses = await session.scalars(stmt)
         return list(statuses)
+
+    @staticmethod
+    async def delete_messages_by_chat(
+        session: AsyncSession,
+        dialog_id: UUID | None = None,
+        group_id: UUID | None = None,
+    ) -> int:
+        """
+        Удаление всех сообщений чата (группы или диалога).
+        Возвращает количество удалённых сообщений.
+        """
+        stmt = delete(Messages).where(
+            Messages.group_id == group_id and Messages.dialog_id == dialog_id
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        return getattr(result, "rowcount", 0)

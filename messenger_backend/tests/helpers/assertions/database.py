@@ -3,6 +3,7 @@ from typing import Optional, TypeVar
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Messages, Dialogs, Groups, GroupMembers
+from src.schemas.enums import GroupMemberRole, MessageType
 from src.crud import MessageCRUD
 
 T = TypeVar("T")
@@ -111,11 +112,28 @@ class MessageDatabaseAssertions:
         sticker_id: UUID,
     ):
         """Проверяет, что сообщение типа STICKER имеет sticker_id"""
-        from src.schemas.enums import MessageType
-
         message = await MessageCRUD.get_message_by_id(message_id, session)
         assert message.type == MessageType.STICKER
         assert message.sticker_id == sticker_id
+
+    @staticmethod
+    async def assert_message_is_system(
+        session: AsyncSession,
+        message_id: UUID,
+        expected_content: str,
+    ):
+        """Проверяет, что сообщение системное и содержит нужный текст"""
+
+        message = await DatabaseAssertions.assert_exists(
+            session, Messages, id=message_id
+        )
+        assert message.type == MessageType.SYSTEM
+        assert message.content == expected_content
+        assert (
+            message.sender_id is None
+        ), "У системного сообщения не должно быть отправителя"
+
+        return message
 
 
 class DialogDatabaseAssertions:
@@ -169,6 +187,14 @@ class GroupDatabaseAssertions:
         return group
 
     @staticmethod
+    async def assert_group_not_exists(
+        session: AsyncSession,
+        group_id: UUID,
+    ):
+        """Проверяет, что группы нет в БД"""
+        await DatabaseAssertions.assert_not_exists(session, Groups, id=group_id)
+
+    @staticmethod
     async def assert_member_in_group(
         session: AsyncSession,
         group_id: UUID,
@@ -185,8 +211,91 @@ class GroupDatabaseAssertions:
 
     @staticmethod
     async def assert_last_message(
-        session: AsyncSession, group_id: UUID, last_message_id: UUID
+        session: AsyncSession,
+        group_id: UUID,
+        last_message_id: UUID,
     ):
         """Проверяет, последнее сообщение в группе по его id"""
         group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
         assert group.last_message_id == last_message_id
+
+    @staticmethod
+    async def assert_group_updated(
+        session: AsyncSession,
+        group_id: UUID,
+        expected_title: str | None = None,
+        expected_description: str | None = None,
+        expected_is_private: bool | None = None,
+    ):
+        """Проверяет, что поля группы обновились"""
+        group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
+
+        if expected_title is not None:
+            assert group.title == expected_title
+        if expected_description is not None:
+            assert group.description == expected_description
+        if expected_is_private is not None:
+            assert group.is_private == expected_is_private
+
+        return group
+
+    @staticmethod
+    async def assert_group_avatar_url(
+        session: AsyncSession,
+        group_id: UUID,
+        expected_url: str | None,
+    ):
+        """Проверяет URL авы группы (None если авы нет)"""
+        group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
+        assert group.avatar_url == expected_url
+        return group
+
+    @staticmethod
+    async def assert_member_role(
+        session: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+        expected_role: GroupMemberRole,
+    ):
+        """Проверяет роль участника группы"""
+        member = await DatabaseAssertions.assert_exists(
+            session,
+            GroupMembers,
+            group_id=group_id,
+            user_id=user_id,
+        )
+        assert (
+            member.role == expected_role
+        ), f"Expected role {expected_role}, got {member.role}"
+        return member
+
+    @staticmethod
+    async def assert_member_not_in_group(
+        session: AsyncSession,
+        group_id: UUID,
+        user_id: UUID,
+    ):
+        """Проверяет, что пользователь НЕ является участником группы"""
+        await DatabaseAssertions.assert_not_exists(
+            session,
+            GroupMembers,
+            group_id=group_id,
+            user_id=user_id,
+        )
+
+    @staticmethod
+    async def assert_group_last_message_is_system(
+        session: AsyncSession,
+        group_id: UUID,
+        expected_content: str,
+    ):
+        """Проверяет, что последнее сообщение в группе — системное и содержит нужный текст"""
+
+        group = await DatabaseAssertions.assert_exists(session, Groups, id=group_id)
+        assert group.last_message_id is not None, "У группы нет last_message"
+        message = await MessageDatabaseAssertions.assert_message_is_system(
+            session,
+            group.last_message_id,
+            expected_content,
+        )
+        return message

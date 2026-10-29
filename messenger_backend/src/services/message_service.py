@@ -1,12 +1,24 @@
 import datetime
 from uuid import UUID
+from fastapi import UploadFile
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from src.services import DialogService, GroupService, StickerService
+from src.services.dialog_service import DialogService
+from src.services.group_service import GroupService
+from src.services.sticker_service import StickerService
+from src.services.file_service import FileService
+
 from src.crud import MessageCRUD
 from src.models import Messages, Users
-from src.schemas.enums import ChatType, MessageType
-from src.schemas import MessageCreateRequest
+from src.schemas.enums import ChatType, MessageType, AvailableMediaType
+from src.schemas import (
+    MessageCreateRequest,
+    UploadMessageFileRequest,
+    DownloadMessageFileRequest,
+    DeleteMessageFileRequest,
+    SystemMessageCreateRequest,
+    MediaResponse,
+)
 from src.exceptions import (
     MissedDataForMessageTypeError,
     MessageNotFoundError,
@@ -81,6 +93,55 @@ class MessageService:
                 group_id=chat_id, session=session
             )
         return set()
+
+    @staticmethod
+    async def upload_message_file(
+        upload_data: UploadMessageFileRequest,
+        upload_file: UploadFile,
+        user: Users,
+        session: AsyncSession,
+    ) -> str:
+        """Сохранение файла сообщения"""
+        # Проверка, что пользователь - участник
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=upload_data.chat_id,
+            chat_type=upload_data.chat_type,
+            session=session,
+        )
+        return await FileService.upload_message_file(
+            upload_data, upload_file, user.username
+        )
+
+    @staticmethod
+    async def download_message_file(
+        download_data: DownloadMessageFileRequest,
+        user: Users,
+        session: AsyncSession,
+    ) -> tuple[bytes, str, str]:
+        """Скачивание файла сообщения"""
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=download_data.chat_id,
+            chat_type=download_data.chat_type,
+            session=session,
+        )
+        return await FileService.download_message_file(download_data)
+
+    @staticmethod
+    async def delete_message_file(
+        delete_data: DeleteMessageFileRequest,
+        user: Users,
+        session: AsyncSession,
+    ) -> bool:
+        """Удаление файла сообщения"""
+        await MessageService.check_user_is_member(
+            user_id=user.id,
+            chat_id=delete_data.chat_id,
+            chat_type=delete_data.chat_type,
+            session=session,
+        )
+        return await FileService.delete_message_file(delete_data)
 
     @staticmethod
     async def create_message(
@@ -165,6 +226,39 @@ class MessageService:
         )
 
     @staticmethod
+    async def create_system_message(
+        session: AsyncSession,
+        message_data: SystemMessageCreateRequest,
+    ) -> Messages:
+        """Создание системного сообщения (без отправителя)"""
+        new_message = Messages(
+            sender_id=None,
+            dialog_id=(
+                message_data.chat_id
+                if message_data.chat_type == ChatType.DIALOGS
+                else None
+            ),
+            group_id=(
+                message_data.chat_id
+                if message_data.chat_type == ChatType.GROUP
+                else None
+            ),
+            type=MessageType.SYSTEM,
+            content=message_data.content,
+            created_at=message_data.created_at,
+        )
+        created_message = await MessageCRUD.create_message(new_message, session)
+
+        # Обновляем last_message в чате
+        await MessageService.update_chat_last_message(
+            chat_id=message_data.chat_id,
+            chat_type=message_data.chat_type,
+            last_message=created_message,
+            session=session,
+        )
+        return created_message
+
+    @staticmethod
     async def update_chat_last_message(
         chat_id: UUID,
         chat_type: ChatType,
@@ -197,3 +291,79 @@ class MessageService:
             read_at=read_at,
             session=session,
         )
+
+    @staticmethod
+    async def create_message_for_developers(
+        user: Users,
+        session: AsyncSession,
+        message_data: MessageCreateRequest,
+        message_file: UploadFile | None = None,
+    ) -> Messages:
+        """Создание сообщения в чате для разработчиков (полностью http)"""
+        # Сохраняем файл сообщения, если он есть
+        if message_file is not None:
+            save_file_url = await MessageService.upload_message_file(
+                upload_data=UploadMessageFileRequest(
+                    chat_id=message_data.chat_id,
+                    chat_type=message_data.chat_type,
+                    file_type=message_data.message_type,
+                ),
+                upload_file=message_file,
+                user=user,
+                session=session,
+            )
+            message_data.file_url = save_file_url
+
+        new_message = await MessageService.create_message(
+            user=user, session=session, message_data=message_data
+        )
+        return new_message
+
+    @staticmethod
+    async def delete_all_messages_in_chat(
+        chat_id: UUID,
+        chat_type: ChatType,
+        session: AsyncSession,
+    ) -> int:
+        """
+        Полное удаление всех сообщений из чата + удаление всех файлов чата.
+        Возвращает количество удалённых сообщений.
+        """
+        deleted_count = await MessageCRUD.delete_messages_by_chat(
+            session=session,
+            group_id=chat_id if chat_type is ChatType.GROUP else None,
+            dialog_id=chat_id if chat_type is ChatType.DIALOGS else None,
+        )
+        # Удаляем файлы сообщений
+        await FileService.delete_all_chat_files(chat_id)
+        return deleted_count
+
+    @staticmethod
+    async def get_chat_media(
+        user_id: UUID,
+        chat_id: UUID,
+        chat_type: ChatType,
+        media_type: AvailableMediaType,
+        page: int,
+        limit: int,
+        session: AsyncSession,
+    ) -> MediaResponse:
+        """Получение медиа чата"""
+        if chat_type == ChatType.GROUP:
+            return await GroupService.get_group_media(
+                user_id=user_id,
+                group_id=chat_id,
+                media_type=media_type,
+                page=page,
+                limit=limit,
+                session=session,
+            )
+        elif chat_type == ChatType.DIALOGS:
+            return await DialogService.get_dialog_media(
+                user_id=user_id,
+                dialog_id=chat_id,
+                media_type=media_type,
+                page=page,
+                limit=limit,
+                session=session,
+            )

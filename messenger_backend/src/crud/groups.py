@@ -1,10 +1,10 @@
-from sqlalchemy import select
+from sqlalchemy import select, delete, func
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from src.models import Groups, GroupMembers, Messages
-from src.schemas.enums import GroupMemberRole
+from src.schemas.enums import GroupMemberRole, MessageType
 
 
 class GroupCRUD:
@@ -93,3 +93,141 @@ class GroupCRUD:
         group.last_message = last_message
         session.add(group)
         await session.commit()
+
+    @staticmethod
+    async def get_group_media(
+        group_id: UUID,
+        media_type: MessageType,
+        page: int,
+        limit: int,
+        session: AsyncSession,
+    ) -> tuple[list[str], int]:
+        """Получение медиа (файлов) группы с пагинацией (items, total)"""
+
+        base_stmt = select(Messages.file_url).where(
+            Messages.group_id == group_id,
+            Messages.type == media_type,
+            Messages.file_url.isnot(None),
+        )
+
+        count_stmt = select(func.count()).select_from(base_stmt.subquery())
+        total = await session.scalar(count_stmt) or 0
+
+        stmt = (
+            base_stmt.order_by(Messages.created_at.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+        )
+        result = await session.execute(stmt)
+        items = list(result.scalars().all())
+
+        return items, total
+
+    @staticmethod
+    async def update_group_avatar_url(
+        group: Groups,
+        avatar_url: str | None,
+        session: AsyncSession,
+    ) -> Groups:
+        """Обновление url-аватарки группы через ORM-объект"""
+        group.avatar_url = avatar_url
+        session.add(group)
+        await session.commit()
+        await session.refresh(group)
+        return group
+
+    @staticmethod
+    async def update_group(
+        group: Groups,
+        update_data: dict,
+        session: AsyncSession,
+    ) -> Groups:
+        """Обновление полей группы в БД"""
+        for field, value in update_data.items():
+            setattr(group, field, value)
+
+        session.add(group)
+        await session.commit()
+        await session.refresh(group)
+        return group
+
+    @staticmethod
+    async def check_admin_group(
+        group_id: UUID, user_id: UUID, session: AsyncSession
+    ) -> bool:
+        """Проверка, является ли пользователь админом группы"""
+        stmt = select(GroupMembers).where(
+            GroupMembers.group_id == group_id,
+            GroupMembers.user_id == user_id,
+            GroupMembers.role == GroupMemberRole.ADMIN,
+        )
+        member = await session.execute(stmt)
+        return member.scalar_one_or_none() is not None
+
+    @staticmethod
+    async def get_group_member(
+        group_id: UUID, user_id: UUID, session: AsyncSession
+    ) -> GroupMembers | None:
+        """Получение записи участника группы"""
+        stmt = select(GroupMembers).where(
+            GroupMembers.group_id == group_id,
+            GroupMembers.user_id == user_id,
+        )
+        result = await session.execute(stmt)
+        return result.scalar_one_or_none()
+
+    @staticmethod
+    async def add_members(
+        group_id: UUID, user_ids: list[UUID], session: AsyncSession
+    ) -> None:
+        """Добавление участников в группу"""
+        group = await GroupCRUD.get_group_by_id(group_id, session)
+        for uid in user_ids:
+            group.group_members.append(GroupMembers(user_id=uid))
+        session.add(group)
+        await session.commit()
+
+    @staticmethod
+    async def remove_member(
+        group_id: UUID, user_id: UUID, session: AsyncSession
+    ) -> None:
+        """Удаление участника из группы"""
+        stmt = delete(GroupMembers).where(
+            GroupMembers.group_id == group_id,
+            GroupMembers.user_id == user_id,
+        )
+        await session.execute(stmt)
+        await session.commit()
+
+    @staticmethod
+    async def update_member_role(
+        group_id: UUID, user_id: UUID, new_role: GroupMemberRole, session: AsyncSession
+    ) -> GroupMembers:
+        """Изменение роли участника"""
+        member = await GroupCRUD.get_group_member(group_id, user_id, session)
+        member.role = new_role
+        session.add(member)
+        await session.commit()
+        await session.refresh(member)
+        return member
+
+    @staticmethod
+    async def delete_group(group_id: UUID, session: AsyncSession) -> None:
+        """Удаление группы (каскадно удалятся участники)"""
+        stmt = delete(Groups).where(Groups.id == group_id)
+        await session.execute(stmt)
+        await session.commit()
+
+    @staticmethod
+    async def transfer_ownership(
+        group: Groups,
+        new_creator_id: UUID,
+        session: AsyncSession,
+    ) -> Groups:
+        """Передача прав владельца группы"""
+        group.created_by = new_creator_id
+        session.add(group)
+
+        await session.commit()
+        await session.refresh(group)
+        return group

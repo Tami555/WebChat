@@ -10,3 +10,11 @@ class MessageType(PyEnum):
     STICKER = "sticker"  # стикер
     FILE = "file"  # файл
     SYSTEM = "system"  # системное сообщение
+
+
+class AvailableMediaType(PyEnum):
+    """Доступные типы медиа"""
+
+    IMAGE = "image"
+    VOICE = "voice"
+    FILE = "file"

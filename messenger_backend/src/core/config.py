@@ -34,6 +34,12 @@ class VerificationConfig(BaseModel):
     max_attempts: int = 3
 
 
+class FileConfig(BaseModel):
+    """Конфигурация работы с файлами"""
+
+    avatar_max_size_mb: int = 5  # 5 MB
+
+
 class DatabaseConfig(BaseModel):
     """Конфигурация Базы данных"""
 
@@ -85,6 +91,7 @@ class Settings(BaseSettings):
     app: BaseAppConfig = BaseAppConfig()
     logging: LoggingConfig = LoggingConfig()
     verification: VerificationConfig = VerificationConfig()
+    files: FileConfig = FileConfig()
     db: DatabaseConfig = DatabaseConfig()
     auth: AuthenticationConfig = AuthenticationConfig()
     redis: RedisConfig = RedisConfig()

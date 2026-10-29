@@ -6,7 +6,7 @@ from .enums import MessageType, ChatType
 
 
 class UploadMessageFileRequest(BaseModel):
-    """Схема отправки файла"""
+    """Схема загрузки файла"""
 
     chat_id: UUID
     chat_type: ChatType

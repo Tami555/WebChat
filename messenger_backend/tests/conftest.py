@@ -140,6 +140,15 @@ async def auth_tokens_user_2(created_user_2):
 
 
 @pytest.fixture
+async def auth_tokens_user_3(created_user_3):
+    """Возвращает JWT токен для авторизованных запросов пользователя-3"""
+    from src.services import AuthService
+
+    tokens = AuthService.create_tokens_by_user(created_user_3)
+    return tokens
+
+
+@pytest.fixture
 async def auth_client_user_1(auth_tokens_user_1):
     """Авторизованный HTTP-клиент пользователь-1"""
     from src.main import app
@@ -165,6 +174,21 @@ async def auth_client_user_2(auth_tokens_user_2):
         base_url="http://test",
         timeout=30.0,
         headers={"Authorization": f"Bearer {auth_tokens_user_2.access_token}"},
+    ) as auth_client:
+        yield auth_client
+
+
+@pytest.fixture
+async def auth_client_user_3(auth_tokens_user_3):
+    """Авторизованный HTTP-клиент пользователь-3"""
+    from src.main import app
+
+    # новый клиент
+    async with AsyncClient(
+        transport=ASGITransport(app=app),
+        base_url="http://test",
+        timeout=30.0,
+        headers={"Authorization": f"Bearer {auth_tokens_user_3.access_token}"},
     ) as auth_client:
         yield auth_client
 
@@ -222,7 +246,7 @@ async def created_group_user1_user2_user3(
 
 @pytest.fixture
 async def created_group_user1_user3(test_db, created_user_1, created_user_3):
-    """Создает группу с пользователем 1 (админ) и участником 3"""
+    """Создает ПУБЛИЧНУЮ группу с пользователем 1 (админ) и участником 3"""
     from src.crud.groups import GroupCRUD
     from tests.fixtures.data import GroupsDataFactory
 
@@ -236,6 +260,122 @@ async def created_group_user1_user3(test_db, created_user_1, created_user_3):
             members_list=[created_user_3.id],
             session=session,
         )
+        return group
+
+
+@pytest.fixture
+async def created_private_group_user1_user3(test_db, created_user_1, created_user_3):
+    """Создает ПРИВАТНУЮ группу с пользователем 1 (админ) и участником 3"""
+    from src.crud.groups import GroupCRUD
+    from tests.fixtures.data import GroupsDataFactory
+
+    group_data = GroupsDataFactory.group_data(
+        title="Private Group",
+        description="Private group desc",
+        is_private=True,
+    )
+    group_data["created_by"] = created_user_1.id
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[created_user_3.id],
+            session=session,
+        )
+        return group
+
+
+@pytest.fixture
+async def created_group_with_avatar(test_db, created_user_1, created_user_2):
+    """Создает группу с аватаркой"""
+    from src.crud.groups import GroupCRUD
+    from tests.fixtures.data import GroupsDataFactory
+
+    group_data = GroupsDataFactory.group_data(title="Group With Avatar")
+    group_data["created_by"] = created_user_1.id
+    group_data["avatar_url"] = "avatars/groups/fake_existing_avatar.jpg"
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[created_user_2.id],
+            session=session,
+        )
+        return group
+
+
+@pytest.fixture
+async def group_with_roles(test_db, created_user_1, created_user_2, created_user_3):
+    """
+    Группа, где:
+    - пользователь 1 — создатель (главный админ)
+    - пользователь 2 — назначенный админ
+    - пользователь 3 — простой участник
+    """
+    from src.crud import GroupCRUD
+    from src.models import GroupMembers
+    from src.schemas.enums import GroupMemberRole
+    from tests.fixtures.data import GroupsDataFactory
+
+    group_data = GroupsDataFactory.group_data(title="Roles Group")
+    group_data["created_by"] = created_user_1.id
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[],
+            session=session,
+        )
+        # Добавляем участников с ролями
+        session.add(
+            GroupMembers(
+                group_id=group.id, user_id=created_user_2.id, role=GroupMemberRole.ADMIN
+            )
+        )
+        session.add(
+            GroupMembers(
+                group_id=group.id,
+                user_id=created_user_3.id,
+                role=GroupMemberRole.MEMBER,
+            )
+        )
+        await session.commit()
+        return group
+
+
+@pytest.fixture
+async def group_with_avatar_and_messages(test_db, created_user_1, created_user_3):
+    """Публичная группа с авой и сообщениями (для теста удаления)"""
+    from src.crud.groups import GroupCRUD
+    from tests.fixtures.data import GroupsDataFactory
+    from src.models.messages import Messages
+    from src.crud.messages import MessageCRUD
+
+    group_data = GroupsDataFactory.group_data(title="To Delete")
+    group_data["created_by"] = created_user_1.id
+    group_data["avatar_url"] = "avatars/groups/fake_avatar.jpg"
+
+    async for session in test_db.create_session():
+        group = await GroupCRUD.create_group(
+            creator_id=created_user_1.id,
+            group_data=group_data,
+            members_list=[created_user_3.id],
+            session=session,
+        )
+        # Создаём сообщения с файлами
+        for i in range(3):
+            msg = Messages(
+                sender_id=created_user_1.id,
+                group_id=group.id,
+                content=f"Test message {i}",
+                file_url=(
+                    f"user_files/chats/{group.id}/file/test_{i}.txt" if i == 0 else None
+                ),
+            )
+            await MessageCRUD.create_message(msg, session)
         return group
 
 
@@ -286,6 +426,35 @@ async def created_message_in_group_1_2_3(
         created_message = await MessageCRUD.create_message(message, session)
         await GroupCRUD.set_last_message(
             created_group_user1_user2_user3, created_message, session
+        )
+        return created_message
+
+
+@pytest.fixture
+async def created_message_in_private_group(
+    test_db, created_user_1, created_private_group_user1_user3
+):
+    """Создает сообщение с файлом в приватной группе (для проверки media)"""
+    from src.crud import MessageCRUD, GroupCRUD
+    from src.models.messages import Messages
+    from src.schemas.enums import MessageType
+    from tests.fixtures.data import MessagesDataFactory
+
+    message_data = MessagesDataFactory.message_data(
+        content="Message with media",
+        type=MessageType.IMAGE,
+    )
+
+    async for session in test_db.create_session():
+        message = Messages(
+            sender_id=created_user_1.id,
+            group_id=created_private_group_user1_user3.id,
+            file_url="/test/media/image.jpg",
+            **message_data,
+        )
+        created_message = await MessageCRUD.create_message(message, session)
+        await GroupCRUD.set_last_message(
+            created_private_group_user1_user3, created_message, session
         )
         return created_message
 
@@ -519,6 +688,27 @@ def test_audio_file():
 
     with tempfile.NamedTemporaryFile(mode="wb", suffix=".mp3", delete=False) as f:
         f.write(b"\xff\xfb\x90\x00\x00\x00\x00\x00")
+        file_path = Path(f.name)
+
+    yield file_path
+
+    if file_path.exists():
+        file_path.unlink()
+
+
+@pytest.fixture
+def test_large_image_file():
+    """Создает временный image-файл размером > 5 МБ"""
+    import tempfile
+    from pathlib import Path
+
+    from src.core.config import get_settings
+
+    settings = get_settings()
+    large_data = b"\xff" * ((settings.files.avatar_max_size_mb + 1) * 1024 * 1024)
+
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg", delete=False) as f:
+        f.write(large_data)
         file_path = Path(f.name)
 
     yield file_path

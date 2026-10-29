@@ -11,17 +11,25 @@ __all__ = (
     "UserResponse",
     "ShortUserResponse",
     "CreateUserRequest",
+    "UserInGroupResponse",
     "ShortMessageResponse",
     "MessageResponse",
     "MessageCreateRequest",
+    "SystemMessageResponse",
+    "SystemMessageCreateRequest",
     "SaveMessageFileRequest",
     "UploadMessageFileRequest",
     "DownloadMessageFileRequest",
     "DeleteMessageFileRequest",
     "ChatResponse",
     "AllChatsResponse",
-    "CreateGroupRequest",
+    "MediaResponse",
+    "ShortGroupResponse",
     "GroupResponse",
+    "UpdateGroupRequest",
+    "AddGroupMembersRequest",
+    "UpdateMemberRoleRequest",
+    "TransferOwnershipRequest",
     "CreateGroupWithMembersRequest",
     "CreateDialogRequest",
     "DialogDetailResponse",
@@ -37,6 +45,7 @@ __all__ = (
     "PingMessageRequest",
     "PongMessageResponse",
     "MessageContentRequest",
+    "BroadcastResult",
 )
 
 
@@ -51,16 +60,35 @@ from .auth import (
     PhoneVerificationRequest,
     VerificationCodeResponse,
 )
-from .users import UserResponse, ShortUserResponse, CreateUserRequest
-from .messages import ShortMessageResponse, MessageResponse, MessageCreateRequest
+from .users import (
+    UserResponse,
+    ShortUserResponse,
+    CreateUserRequest,
+    UserInGroupResponse,
+)
+from .messages import (
+    ShortMessageResponse,
+    MessageResponse,
+    MessageCreateRequest,
+    SystemMessageResponse,
+    SystemMessageCreateRequest,
+)
 from .files import (
     SaveMessageFileRequest,
     UploadMessageFileRequest,
     DownloadMessageFileRequest,
     DeleteMessageFileRequest,
 )
-from .chats import ChatResponse, AllChatsResponse
-from .groups import CreateGroupRequest, GroupResponse, CreateGroupWithMembersRequest
+from .chats import ChatResponse, AllChatsResponse, MediaResponse
+from .groups import (
+    ShortGroupResponse,
+    CreateGroupWithMembersRequest,
+    GroupResponse,
+    UpdateGroupRequest,
+    AddGroupMembersRequest,
+    UpdateMemberRoleRequest,
+    TransferOwnershipRequest,
+)
 from .dialogs import CreateDialogRequest, DialogDetailResponse
 from .sticker import (
     ShortStickerResponse,
@@ -77,4 +105,5 @@ from .websocket import (
     PingMessageRequest,
     PongMessageResponse,
     MessageContentRequest,
+    BroadcastResult,
 )

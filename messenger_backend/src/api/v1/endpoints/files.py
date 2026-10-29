@@ -1,3 +1,4 @@
+from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi import APIRouter, Depends, UploadFile, Response
 from urllib.parse import quote
@@ -9,8 +10,9 @@ from src.schemas import (
     UploadMessageFileRequest,
     DownloadMessageFileRequest,
     DeleteMessageFileRequest,
+    ShortGroupResponse,
 )
-from src.services import FileService
+from src.services import MessageService, GroupService
 
 router = APIRouter()
 
@@ -25,7 +27,7 @@ async def upload_message_file(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Загрузка файла сообщения"""
-    save_file_url = await FileService.upload_message_file(
+    save_file_url = await MessageService.upload_message_file(
         upload_data=upload_data,
         upload_file=upload_file,
         user=user,
@@ -41,7 +43,7 @@ async def download_message_file(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Скачивание файла сообщения"""
-    content, content_type, filename = await FileService.download_message_file(
+    content, content_type, filename = await MessageService.download_message_file(
         download_data=download_data,
         user=user,
         session=session,
@@ -61,9 +63,39 @@ async def delete_message_file(
     session: AsyncSession = Depends(database_helper.create_scoped_session),
 ):
     """Удаление файла сообщения"""
-    deleted = await FileService.delete_message_file(
+    deleted = await MessageService.delete_message_file(
         delete_data=delete_data,
         user=user,
         session=session,
     )
     return {"deleted": deleted}
+
+
+@router.put("/groups/{group_id}/avatar", response_model=ShortGroupResponse)
+async def update_group_avatar(
+    group_id: UUID,
+    avatar: UploadFile,
+    user: Users = Depends(get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Обновить или удалить аву группы"""
+    return await GroupService.update_group_avatar(
+        user=user,
+        group_id=group_id,
+        avatar=avatar,
+        session=session,
+    )
+
+
+@router.delete("/groups/{group_id}/avatar", response_model=ShortGroupResponse)
+async def delete_group_avatar(
+    group_id: UUID,
+    user: Users = Depends(get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Удалить аватарку группы"""
+    return await GroupService.delete_group_avatar(
+        user=user,
+        group_id=group_id,
+        session=session,
+    )
