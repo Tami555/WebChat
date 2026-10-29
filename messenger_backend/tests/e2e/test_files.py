@@ -1,6 +1,7 @@
 import pytest
 from uuid import uuid4
 
+from src.core.config import get_settings
 from src.schemas import ShortGroupResponse
 from src.schemas.enums import ChatType, MessageType
 from tests.helpers.assertions import (
@@ -1008,6 +1009,31 @@ class TestFiles:
                     assert group.avatar_url is not None
                     assert group.avatar_url.endswith("avatar.jpg")
                 FileFactory.cleanup_group_avatar(group_id)
+
+            @pytest.mark.asyncio
+            async def test_update_avatar_too_large(
+                self,
+                auth_client_user_1,
+                created_group_user1_user2_user3,
+                test_large_image_file,
+            ):
+                """Тест: загрузка авы большого размера"""
+                settings = get_settings()
+
+                group_id = created_group_user1_user2_user3.id
+
+                with open(test_large_image_file, "rb") as f:
+                    files = {"avatar": ("large_avatar.jpg", f, "image/jpeg")}
+                    response = await auth_client_user_1.put(
+                        TestFiles.get_avatar_url(group_id),
+                        files=files,
+                    )
+
+                HttpAssertions.assert_error_response(
+                    response=response,
+                    expected_message=f"Размер файла не должен превышать {settings.files.avatar_max_size_mb} МБ",
+                    expected_status=413,
+                )
 
             @pytest.mark.asyncio
             async def test_update_avatar_invalid_file(

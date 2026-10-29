@@ -31,3 +31,13 @@ class FilePathNotFoundError(BaseAppException):
             message="Файл не найден",
             status_code=status.HTTP_404_NOT_FOUND,
         )
+
+
+class FileSizeTooLargeError(BaseAppException):
+    """Файл превышает допустимый размер"""
+
+    def __init__(self, max_size_mb: int = 5):
+        super().__init__(
+            message=f"Размер файла не должен превышать {max_size_mb} МБ",
+            status_code=status.HTTP_413_CONTENT_TOO_LARGE,
+        )

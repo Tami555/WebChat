@@ -28,6 +28,7 @@ __all__ = (
     "NotCorrectMessageTypeForFileTypeError",
     "InvalidAvatarFileError",
     "FilePathNotFoundError",
+    "FileSizeTooLargeError",
     "MissedDataForMessageTypeError",
     "MessageNotFoundError",
     "FutureTimestampMessageError",
@@ -73,6 +74,7 @@ from .errors.files import (
     NotCorrectMessageTypeForFileTypeError,
     InvalidAvatarFileError,
     FilePathNotFoundError,
+    FileSizeTooLargeError,
 )
 from .errors.messages import (
     MissedDataForMessageTypeError,

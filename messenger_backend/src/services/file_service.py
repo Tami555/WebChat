@@ -2,6 +2,7 @@ from uuid import UUID
 from fastapi import UploadFile
 from pathlib import Path
 
+from src.core.config import get_settings
 from src.schemas import (
     UploadMessageFileRequest,
     DownloadMessageFileRequest,
@@ -13,11 +14,27 @@ from src.utils.files import (
     is_image_file,
     FilePathHelper,
 )
-from src.exceptions import NotCorrectMessageTypeForFileTypeError, InvalidAvatarFileError
+from src.exceptions import (
+    NotCorrectMessageTypeForFileTypeError,
+    InvalidAvatarFileError,
+    FileSizeTooLargeError,
+)
 
 
 class FileService:
     """Сервис для работы с файлами"""
+
+    settings = get_settings()
+
+    @staticmethod
+    async def check_avatar_size(avatar: UploadFile):
+        max_size = FileService.settings.files.avatar_max_size_mb
+        content = await avatar.read()
+        if len(content) > max_size * 1024 * 1024:
+            raise FileSizeTooLargeError(max_size_mb=max_size)
+        # Возвращаем курсор файла в начало
+        await avatar.seek(0)
+        return True
 
     @staticmethod
     async def upload_message_file(
@@ -72,6 +89,8 @@ class FileService:
         if not is_image_file(avatar.content_type):
             raise InvalidAvatarFileError(avatar.content_type)
 
+        await FileService.check_avatar_size(avatar)
+
         file_manager = get_file_manager()
         file_path = FilePathHelper.generate_group_avatar_path(
             group_id=group_id,
@@ -87,6 +106,8 @@ class FileService:
         """Загрузка аватарки пользователя"""
         if not is_image_file(avatar.content_type):
             raise InvalidAvatarFileError(avatar.content_type)
+
+        await FileService.check_avatar_size(avatar)
 
         file_manager = get_file_manager()
         file_path = FilePathHelper.generate_user_avatar_path(

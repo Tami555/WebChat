@@ -694,3 +694,24 @@ def test_audio_file():
 
     if file_path.exists():
         file_path.unlink()
+
+
+@pytest.fixture
+def test_large_image_file():
+    """Создает временный image-файл размером > 5 МБ"""
+    import tempfile
+    from pathlib import Path
+
+    from src.core.config import get_settings
+
+    settings = get_settings()
+    large_data = b"\xff" * ((settings.files.avatar_max_size_mb + 1) * 1024 * 1024)
+
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=".jpg", delete=False) as f:
+        f.write(large_data)
+        file_path = Path(f.name)
+
+    yield file_path
+
+    if file_path.exists():
+        file_path.unlink()
