@@ -84,11 +84,3 @@ class SystemMessageCreateRequest(BaseModel):
     chat_type: ChatType
     content: str
     created_at: datetime.datetime = Field(default_factory=datetime.datetime.now)
-
-
-class MediaMessagesResponse(BaseModel):
-    """Схема медиа-сообщений (сгруппированных по типу)"""
-
-    images: list[str]
-    voices: list[str]
-    files: list[str]

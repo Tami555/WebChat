@@ -3,7 +3,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.models import Users, Dialogs, Messages
 from src.crud import DialogCRUD, MessageCRUD
-from src.schemas import ChatResponse, CreateDialogRequest
+from src.schemas import ChatResponse, CreateDialogRequest, MediaResponse
+from src.schemas.enums import AvailableMediaType
 from src.exceptions import (
     DialogAlreadyExistsError,
     DialogWithOneUserError,
@@ -113,6 +114,19 @@ class DialogService:
         """Обновление последнего сообщения в диалоге"""
         dialog = await DialogService.get_dialog_by_id(dialog_id, session)
         await DialogCRUD.set_last_message(dialog, last_message, session)
+
+    @staticmethod
+    async def get_dialog_media(
+        user_id: UUID,
+        dialog_id: UUID,
+        media_type: AvailableMediaType,
+        page: int,
+        limit: int,
+        session: AsyncSession,
+    ) -> MediaResponse:
+        """Получение медиа диалога (в разработке)"""
+        # TODO: Реализовать логику получения медиа для диалогов
+        return MediaResponse(items=[], total=0, page=page, limit=limit)
 
     # Удаление
     # Получение всей инфы

@@ -6,9 +6,14 @@ from fastapi import APIRouter, Depends, Query, UploadFile
 import src.api.v1.dependencies as dependencies
 from src.core.database import database_helper
 from src.models import Users
-from src.schemas import AllChatsResponse, MessageResponse, MessageCreateRequest
+from src.schemas import (
+    AllChatsResponse,
+    MessageResponse,
+    MessageCreateRequest,
+    MediaResponse,
+)
 from src.services import GroupService, DialogService, MessageService
-from src.schemas.enums import ChatType
+from src.schemas.enums import ChatType, AvailableMediaType
 
 router = APIRouter()
 
@@ -61,3 +66,27 @@ async def create_message(
         session=session,
     )
     return {"status": "created", "message_id": new_message.id}
+
+
+@router.get("/{chat_id}/media", response_model=MediaResponse)
+async def get_chat_media(
+    chat_id: UUID,
+    chat_type: Annotated[ChatType, Query(...)],
+    media_type: Annotated[
+        AvailableMediaType, Query(alias="type")
+    ] = AvailableMediaType.IMAGE,
+    page: Annotated[int, Query(gt=0)] = 1,
+    limit: Annotated[int, Query(gt=0, le=100)] = 50,
+    user: Users = Depends(dependencies.get_current_user),
+    session: AsyncSession = Depends(database_helper.create_scoped_session),
+):
+    """Получить медиа-файлы чата с пагинацией"""
+    return await MessageService.get_chat_media(
+        user_id=user.id,
+        chat_id=chat_id,
+        chat_type=chat_type,
+        media_type=media_type,
+        page=page,
+        limit=limit,
+        session=session,
+    )

@@ -17,13 +17,13 @@ __all__ = (
     "MessageCreateRequest",
     "SystemMessageResponse",
     "SystemMessageCreateRequest",
-    "MediaMessagesResponse",
     "SaveMessageFileRequest",
     "UploadMessageFileRequest",
     "DownloadMessageFileRequest",
     "DeleteMessageFileRequest",
     "ChatResponse",
     "AllChatsResponse",
+    "MediaResponse",
     "ShortGroupResponse",
     "GroupResponse",
     "UpdateGroupRequest",
@@ -72,7 +72,6 @@ from .messages import (
     MessageCreateRequest,
     SystemMessageResponse,
     SystemMessageCreateRequest,
-    MediaMessagesResponse,
 )
 from .files import (
     SaveMessageFileRequest,
@@ -80,7 +79,7 @@ from .files import (
     DownloadMessageFileRequest,
     DeleteMessageFileRequest,
 )
-from .chats import ChatResponse, AllChatsResponse
+from .chats import ChatResponse, AllChatsResponse, MediaResponse
 from .groups import (
     ShortGroupResponse,
     CreateGroupWithMembersRequest,

@@ -1,4 +1,4 @@
-from sqlalchemy import select, delete
+from sqlalchemy import select, delete, func
 from sqlalchemy.orm import selectinload, joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
@@ -95,16 +95,33 @@ class GroupCRUD:
         await session.commit()
 
     @staticmethod
-    async def get_group_media(group_id: UUID, session: AsyncSession) -> list:
-        """Получение медиа (файлы) группы"""
-        stmt = select(Messages.type, Messages.file_url).where(
-            Messages.group_id == group_id
-            and Messages.type.in_(
-                [MessageType.IMAGE, MessageType.VOICE, MessageType.FILE]
-            )
+    async def get_group_media(
+        group_id: UUID,
+        media_type: MessageType,
+        page: int,
+        limit: int,
+        session: AsyncSession,
+    ) -> tuple[list[str], int]:
+        """Получение медиа (файлов) группы с пагинацией (items, total)"""
+
+        base_stmt = select(Messages.file_url).where(
+            Messages.group_id == group_id,
+            Messages.type == media_type,
+            Messages.file_url.isnot(None),
         )
-        messages = await session.execute(stmt)
-        return list(messages.all())
+
+        count_stmt = select(func.count()).select_from(base_stmt.subquery())
+        total = await session.scalar(count_stmt) or 0
+
+        stmt = (
+            base_stmt.order_by(Messages.created_at.desc())
+            .offset((page - 1) * limit)
+            .limit(limit)
+        )
+        result = await session.execute(stmt)
+        items = list(result.scalars().all())
+
+        return items, total
 
     @staticmethod
     async def update_group_avatar_url(

@@ -14,8 +14,9 @@ from src.schemas import (
     UpdateMemberRoleRequest,
     SystemMessageCreateRequest,
     TransferOwnershipRequest,
+    MediaResponse,
 )
-from src.schemas.enums import MessageType, ChatType, GroupMemberRole
+from src.schemas.enums import MessageType, ChatType, GroupMemberRole, AvailableMediaType
 from src.exceptions import (
     CreatorIsNotMemberError,
     RecurringMembersError,
@@ -177,14 +178,12 @@ class GroupService:
     async def get_group_detail(
         user_id: UUID, group_id: UUID, session: AsyncSession
     ) -> GroupResponse:
-        """Получение полной информации о группе"""
+        """Получение полной информации о группе (без медиа)"""
         group = await GroupService.get_group_with_members(group_id, session)
         if group.is_private:
             await GroupService.check_user_in_group_members(user_id, group_id, session)
-        media = await GroupCRUD.get_group_media(group_id, session)
 
         members = []
-        media_files = {"images": [], "voices": [], "files": []}
         for m in group.group_members:
             members.append(
                 UserInGroupResponse(
@@ -197,16 +196,6 @@ class GroupService:
                     role=m.role,
                 )
             )
-
-        for m in media:
-            match m.type:
-                case MessageType.IMAGE:
-                    media_files["images"].append(m.file_url)
-                case MessageType.VOICE:
-                    media_files["voices"].append(m.file_url)
-                case MessageType.FILE:
-                    media_files["files"].append(m.file_url)
-
         return GroupResponse(
             id=group.id,
             title=group.title,
@@ -215,8 +204,32 @@ class GroupService:
             avatar_url=group.avatar_url,
             created_at=group.created_at,
             members=members,
-            media=media_files,
         )
+
+    @staticmethod
+    async def get_group_media(
+        user_id: UUID,
+        group_id: UUID,
+        media_type: AvailableMediaType,
+        page: int,
+        limit: int,
+        session: AsyncSession,
+    ) -> MediaResponse:
+        """Получение медиа группы с пагинацией"""
+        group = await GroupService.get_group_by_id(group_id, session)
+
+        if group.is_private:
+            await GroupService.check_user_in_group_members(user_id, group_id, session)
+
+        media_list, count = await GroupCRUD.get_group_media(
+            group_id=group_id,
+            media_type=MessageType(media_type.value),
+            page=page,
+            limit=limit,
+            session=session,
+        )
+
+        return MediaResponse(items=media_list, total=count, page=page, limit=limit)
 
     @staticmethod
     async def update_group_info(

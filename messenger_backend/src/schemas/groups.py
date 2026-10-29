@@ -3,7 +3,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, field_validator
 from fastapi import Form
 
-from src.schemas import UserInGroupResponse, MediaMessagesResponse
+from src.schemas import UserInGroupResponse
 from src.schemas.enums import GroupMemberRole
 
 
@@ -45,7 +45,6 @@ class GroupResponse(ShortGroupResponse):
     avatar_url: str | None = None
     created_at: datetime.datetime
     members: list[UserInGroupResponse]
-    media: MediaMessagesResponse
 
 
 class UpdateGroupRequest(BaseModel):

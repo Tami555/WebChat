@@ -10,13 +10,14 @@ from src.services.file_service import FileService
 
 from src.crud import MessageCRUD
 from src.models import Messages, Users
-from src.schemas.enums import ChatType, MessageType
+from src.schemas.enums import ChatType, MessageType, AvailableMediaType
 from src.schemas import (
     MessageCreateRequest,
     UploadMessageFileRequest,
     DownloadMessageFileRequest,
     DeleteMessageFileRequest,
     SystemMessageCreateRequest,
+    MediaResponse,
 )
 from src.exceptions import (
     MissedDataForMessageTypeError,
@@ -336,3 +337,33 @@ class MessageService:
         # Удаляем файлы сообщений
         await FileService.delete_all_chat_files(chat_id)
         return deleted_count
+
+    @staticmethod
+    async def get_chat_media(
+        user_id: UUID,
+        chat_id: UUID,
+        chat_type: ChatType,
+        media_type: AvailableMediaType,
+        page: int,
+        limit: int,
+        session: AsyncSession,
+    ) -> MediaResponse:
+        """Получение медиа чата"""
+        if chat_type == ChatType.GROUP:
+            return await GroupService.get_group_media(
+                user_id=user_id,
+                group_id=chat_id,
+                media_type=media_type,
+                page=page,
+                limit=limit,
+                session=session,
+            )
+        elif chat_type == ChatType.DIALOGS:
+            return await DialogService.get_dialog_media(
+                user_id=user_id,
+                dialog_id=chat_id,
+                media_type=media_type,
+                page=page,
+                limit=limit,
+                session=session,
+            )
